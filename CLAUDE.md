@@ -26,7 +26,7 @@ All routes live under `app/` following Next.js App Router conventions. Pages are
 
 ```
 app/
-  register/          # Week 1 – member intake form (client component)
+  login/             # Week 4 – officer email/password login (client component)
   admin/
     create-event/    # Week 1 – officer event creator (client component)
     events/          # Week 3 – officer analytics dashboard
@@ -36,8 +36,10 @@ app/
     gcal/            # Week 3 – Google Calendar integration route
 lib/
   supabase/
-    client.ts        # singleton browser Supabase client (createClient)
-middleware.ts        # Week 4 – auth guard for all /admin/* routes
+    client.ts        # singleton cookie-backed browser client (createBrowserClient)
+    server.ts        # cookie-aware server client for Server Components/actions
+    proxy.ts         # updateSession helper used by the proxy auth wall
+proxy.ts             # Week 4 – auth guard for all /admin/* routes (Next 16 renamed from middleware.ts)
 ```
 
 ## Database schema (Supabase)

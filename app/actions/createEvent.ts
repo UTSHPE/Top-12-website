@@ -1,6 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 import { generateAccessCode } from '@/lib/accessCode'
 import crypto from 'crypto'
 
@@ -20,6 +21,15 @@ export async function createEvent(input: {
   isRecurring: boolean
   weekCount: number
 }) {
+  // Authorize: server actions POST to their host route, so the /admin/* proxy
+  // wall covers this — but verify the session here too rather than relying on
+  // the proxy alone (per Next.js data-security guidance).
+  const auth = await createClient()
+  const {
+    data: { user },
+  } = await auth.auth.getUser()
+  if (!user) throw new Error('Not authorized.')
+
   const supabase = createAdminClient()
 
   const recurrence_group_id = input.isRecurring ? crypto.randomUUID() : null

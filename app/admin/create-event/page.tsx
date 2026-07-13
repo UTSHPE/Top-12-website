@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createEvent } from '@/app/actions/createEvent'
+import LogoutButton from '@/app/admin/LogoutButton'
 
 const EVENT_TYPES = [
   'General Meeting',
@@ -80,6 +81,9 @@ export default function CreateEventPage() {
   return (
     <main className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12">
       <div className="w-full max-w-xl bg-white rounded-2xl shadow-md p-8">
+        <div className="flex justify-end mb-2">
+          <LogoutButton />
+        </div>
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold text-gray-900">Create Event</h1>
           <p className="mt-2 text-sm text-gray-500">Fill out event details for the chapter</p>
