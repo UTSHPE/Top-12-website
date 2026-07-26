@@ -29,7 +29,7 @@ export default function CreateEventPage() {
   const [multiplier, setMultiplier] = useState(1.0)
   const [isRecurring, setIsRecurring] = useState(false)
   const [weekCount, setWeekCount] = useState(2)
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'warning' | 'error'>('idle')
   const [successMsg, setSuccessMsg] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
 
@@ -39,7 +39,7 @@ export default function CreateEventPage() {
     setErrorMsg('')
 
     try {
-      await createEvent({
+      const { calendarWarnings } = await createEvent({
         title,
         location,
         eventType,
@@ -54,12 +54,16 @@ export default function CreateEventPage() {
         weekCount: isRecurring ? weekCount : 1,
       })
 
-      setSuccessMsg(
-        isRecurring
-          ? `${weekCount} events created successfully!`
-          : 'Event created successfully!'
-      )
-      setStatus('success')
+      const created = isRecurring ? `${weekCount} events created` : 'Event created'
+      if (calendarWarnings.length > 0) {
+        setSuccessMsg(
+          `${created}, but ${calendarWarnings.length === 1 ? 'it was' : `${calendarWarnings.length} were`} not added to the Google Calendar — ${calendarWarnings[0]}`
+        )
+        setStatus('warning')
+      } else {
+        setSuccessMsg(`${created} successfully!`)
+        setStatus('success')
+      }
       setTitle('')
       setLocation('')
       setEventType('')
@@ -91,6 +95,11 @@ export default function CreateEventPage() {
 
         {status === 'success' && (
           <div className="mb-6 rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-green-800 text-sm">
+            {successMsg}
+          </div>
+        )}
+        {status === 'warning' && (
+          <div className="mb-6 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-amber-900 text-sm">
             {successMsg}
           </div>
         )}
