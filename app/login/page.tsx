@@ -2,32 +2,32 @@
 
 import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { FaArrowRight } from 'react-icons/fa6'
 import { supabase } from '@/lib/supabase/client'
+import ErrorStrip from '@/components/ErrorStrip'
+import Logo from '@/components/Logo'
 
 const INPUT =
-  'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent'
-const LABEL = 'block text-sm font-medium text-gray-700 mb-1'
+  'w-full rounded-[10px] border-[1.5px] border-line bg-surface px-[13px] py-[11px] text-[15px] font-semibold outline-none transition-colors focus:border-primary-bright'
+const LABEL = 'mb-1.5 block text-[13px] font-semibold text-muted'
 
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const next = searchParams.get('next') ?? '/admin/create-event'
+  const next = searchParams.get('next') ?? '/admin'
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle')
-  const [errorMsg, setErrorMsg] = useState('')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setStatus('loading')
-    setErrorMsg('')
 
     const { error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
       setStatus('error')
-      setErrorMsg('Invalid email or password.')
       return
     }
 
@@ -37,25 +37,38 @@ function LoginForm() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12">
-      <div className="w-full max-w-sm bg-white rounded-2xl shadow-md p-8">
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-gray-900">Officer Login</h1>
-          <p className="mt-2 text-sm text-gray-500">
-            Sign in to access the admin dashboard
+    <main className="flex flex-1 items-center justify-center px-5 py-12">
+      <div className="w-full max-w-[400px]">
+        <div className="mb-6 text-center">
+          <Logo height={30} className="mb-6" />
+          <p className="mb-2 text-[11px] font-bold tracking-[.09em] text-faint uppercase">
+            Officer Console
+          </p>
+          <h1 className="font-display text-[26px] font-extrabold tracking-[-.5px]">
+            Sign in
+          </h1>
+          <p className="mt-1 text-sm text-faint">
+            Top 12 accounts only — members don&apos;t need to log in to check in.
           </p>
         </div>
 
-        {status === 'error' && (
-          <div className="mb-6 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-red-800 text-sm">
-            {errorMsg}
-          </div>
-        )}
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col gap-4 rounded-xl bg-surface p-6 shadow-card sm:p-7"
+        >
+          {status === 'error' && (
+            <ErrorStrip
+              title="That didn't work."
+              detail="Check the email and password, or ask another officer to reset it."
+            />
+          )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className={LABEL}>Email</label>
+            <label className={LABEL} htmlFor="email">
+              Email
+            </label>
             <input
+              id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -66,8 +79,11 @@ function LoginForm() {
           </div>
 
           <div>
-            <label className={LABEL}>Password</label>
+            <label className={LABEL} htmlFor="password">
+              Password
+            </label>
             <input
+              id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -80,9 +96,10 @@ function LoginForm() {
           <button
             type="submit"
             disabled={status === 'loading'}
-            className="w-full rounded-lg bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white font-semibold py-2.5 text-sm transition-colors"
+            className="mt-1 flex w-full items-center justify-center gap-2.5 rounded-md bg-primary-bright p-3.5 text-base font-bold text-white shadow-cta transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:bg-primary-bright/50 disabled:shadow-none"
           >
-            {status === 'loading' ? 'Signing in...' : 'Sign In'}
+            {status === 'loading' ? 'Signing in…' : 'Sign in'}
+            {status !== 'loading' && <FaArrowRight aria-hidden className="size-3.5" />}
           </button>
         </form>
       </div>

@@ -1,65 +1,121 @@
-import Image from "next/image";
+import Link from 'next/link'
+import { FaArrowRight, FaCalendarDay, FaLocationArrow, FaRankingStar } from 'react-icons/fa6'
+import { getOpenEvent, getUpcomingEvents } from '@/lib/events'
+import { getLeaderboard } from '@/lib/leaderboard'
+import { currentSeason } from '@/lib/format'
+import MemberNav from '@/components/MemberNav'
+import EventCard from '@/components/EventCard'
+import { LiveDot } from '@/components/StatusPill'
 
-export default function Home() {
+export const revalidate = 0
+
+// The design covers check-in, events and the leaderboard; this landing exists
+// so the "Home" nav item has somewhere to go, and deliberately just points at
+// those three screens using the same vocabulary.
+export default async function Home() {
+  const [openEvent, upcoming, board] = await Promise.all([
+    getOpenEvent(),
+    getUpcomingEvents(3),
+    getLeaderboard(),
+  ])
+
+  const next = upcoming.filter((event) => event.id !== openEvent?.id).slice(0, 3)
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <>
+      <MemberNav />
+
+      <main className="mx-auto w-full max-w-[1100px] flex-1 px-5 py-8 sm:px-[30px] sm:py-10">
+        <section className="relative overflow-hidden rounded-xl bg-primary p-8 text-white sm:p-11">
+          <FaLocationArrow
+            aria-hidden
+            className="pointer-events-none absolute -right-10 -bottom-16 text-[220px] text-white/8"
+          />
+          <div className="relative">
+            <p className="mb-3 text-[13px] font-bold tracking-[.08em] text-white/80 uppercase">
+              {currentSeason()} · UT SHPE
+            </p>
+            <h1 className="font-display max-w-[16ch] text-[34px] leading-[1.05] font-extrabold tracking-[-1px] sm:text-[44px]">
+              You showed up. Let&apos;s log it.
+            </h1>
+            <p className="mt-3.5 max-w-[46ch] text-base leading-relaxed text-white/90">
+              Scan the check-in code at a chapter event to earn points. They land on
+              the board the moment you do.
+            </p>
+
+            {openEvent && (
+              <p className="mt-5 inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-semibold">
+                <LiveDot className="size-1.5 bg-[#8FE3C9]" />
+                {openEvent.title} is open for check-in
+              </p>
+            )}
+
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Link
+                href="/leaderboard"
+                className="flex items-center gap-2.5 rounded-md bg-white px-6 py-3.5 font-bold text-primary"
+              >
+                See the leaderboard <FaArrowRight aria-hidden className="size-3.5" />
+              </Link>
+              <Link
+                href="/events"
+                className="rounded-md bg-white/15 px-6 py-3.5 font-semibold text-white"
+              >
+                Browse events
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-8 grid gap-4 sm:grid-cols-2">
+          <Link
+            href="/events"
+            className="lift flex items-center gap-4 rounded-lg bg-surface p-5 shadow-card"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            <span className="flex size-11 flex-none items-center justify-center rounded-md bg-tint-orange text-primary">
+              <FaCalendarDay aria-hidden className="size-[18px]" />
+            </span>
+            <span>
+              <span className="font-display block text-base font-extrabold">
+                Upcoming events
+              </span>
+              <span className="text-sm text-muted">
+                {upcoming.length} on the calendar
+              </span>
+            </span>
+          </Link>
+
+          <Link
+            href="/leaderboard"
+            className="lift flex items-center gap-4 rounded-lg bg-surface p-5 shadow-card"
           >
-            Documentation
-          </a>
-        </div>
+            <span className="flex size-11 flex-none items-center justify-center rounded-md bg-tint-blue text-secondary">
+              <FaRankingStar aria-hidden className="size-[18px]" />
+            </span>
+            <span>
+              <span className="font-display block text-base font-extrabold">
+                Chapter leaderboard
+              </span>
+              <span className="text-sm text-muted">
+                {board.length} members on the board
+              </span>
+            </span>
+          </Link>
+        </section>
+
+        {next.length > 0 && (
+          <section className="mt-10">
+            <h2 className="font-display mb-4 text-xl font-extrabold tracking-[-.4px]">
+              Coming up
+            </h2>
+            <div className="grid gap-[18px] md:grid-cols-2 xl:grid-cols-3">
+              {next.map((event) => (
+                <EventCard key={event.id} event={event} />
+              ))}
+            </div>
+          </section>
+        )}
       </main>
-    </div>
-  );
+    </>
+  )
 }

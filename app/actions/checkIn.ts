@@ -1,6 +1,25 @@
 'use server'
 
+import { cookies } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getRankFor } from '@/lib/leaderboard'
+import { EID_COOKIE, EID_COOKIE_MAX_AGE } from '@/lib/memberSession'
+
+export type CheckInError =
+  | 'invalid_code'
+  | 'window_closed'
+  | 'member_not_found'
+  | 'already_signed_in'
+
+export type CheckInResult =
+  | {
+      success: true
+      points: number
+      eventName: string
+      /** Position on the board after this check-in, if it could be computed. */
+      rank: number | null
+    }
+  | { success: false; error: CheckInError }
 
 export async function checkIn({
   eid,
@@ -8,13 +27,13 @@ export async function checkIn({
 }: {
   eid: string
   accessCode: string
-}): Promise<{ success: true; points: number } | { success: false; error: string }> {
+}): Promise<CheckInResult> {
   const supabase = createAdminClient()
 
   // Step 1 — find the event by access code
   const { data: event } = await supabase
     .from('events')
-    .select('id, check_in_start, check_in_end, base_points, multiplier')
+    .select('id, title, check_in_start, check_in_end, base_points, multiplier')
     .eq('access_code', accessCode)
     .single()
 
@@ -57,5 +76,20 @@ export async function checkIn({
 
   if (insertError) throw insertError
 
-  return { success: true, points: points_earned }
+  // Remember who this is, so the leaderboard can show them their own rank.
+  const cookieStore = await cookies()
+  cookieStore.set(EID_COOKIE, eid, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+    maxAge: EID_COOKIE_MAX_AGE,
+  })
+
+  return {
+    success: true,
+    points: points_earned,
+    eventName: event.title,
+    rank: await getRankFor(eid),
+  }
 }

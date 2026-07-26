@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { FaRightFromBracket } from 'react-icons/fa6'
 import { supabase } from '@/lib/supabase/client'
 
 export default function LogoutButton() {
@@ -15,9 +16,11 @@ export default function LogoutButton() {
   return (
     <button
       onClick={handleLogout}
-      className="text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors"
+      aria-label="Log out"
+      className="flex flex-none items-center gap-2.5 rounded-sm px-2 py-2 text-xs font-semibold text-[#A99E8F] transition-colors hover:text-white md:px-3"
     >
-      Log out
+      <FaRightFromBracket aria-hidden className="size-3.5" />
+      <span className="hidden md:inline">Log out</span>
     </button>
   )
 }

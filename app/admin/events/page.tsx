@@ -1,98 +1,97 @@
-import { createClient } from '@supabase/supabase-js';
+import { categoryStyle, getAllEventsWithAttendance } from '@/lib/events'
+import { formatDateLong, formatPoints } from '@/lib/format'
+import AdminTopbar, { NewEventButton } from '@/app/admin/AdminTopbar'
+import { LiveDot } from '@/components/StatusPill'
+import DeleteEventButton from './DeleteEventButton'
 
+export const revalidate = 0
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-export const revalidate = 0;
+const COLS = 'grid-cols-[2fr_1.1fr_1.2fr_.9fr_1fr_.7fr_1fr_120px]'
 
 export default async function OfficerAnalyticsPage() {
-  //Fetch all historical chapter events, sorting with the newest meetings on top
-  const { data: events, error: eventsError } = await supabase
-    .from('events')
-    .select('*')
-    .order('calendar_start', { ascending: false });
+  const events = await getAllEventsWithAttendance()
 
-  if (eventsError) {
-    return <div style={{ padding: '20px', color: 'red' }}>Error loading database events: {eventsError.message}</div>;
-  }
-
-  //For each event row, compile headcounts and total points concurrently
-  const analyticsData = await Promise.all(
-    events.map(async (event) => {
-      const { count, error: countError } = await supabase
-        .from('sign_ins')
-        .select('*', { count: 'exact', head: true })
-        .eq('event_id', event.id);
-
-      //Retrieve the point values for this event to sum overall distribution weights
-      const { data: signIns, error: pointsError } = await supabase
-        .from('sign_ins')
-        .select('points_earned')
-        .eq('event_id', event.id);
-
-      if (countError || pointsError) {
-        console.error(`Error calculating attendance aggregates for event ID ${event.id}`);
-      }
-
-      const totalPointsDistributed = signIns
-        ? signIns.reduce((sum, item) => sum + Number(item.points_earned), 0)
-        : 0;
-
-      return {
-        ...event,
-        headcount: count || 0,
-        totalPoints: totalPointsDistributed,
-      };
-    })
-  );
+  const totalHeadcount = events.reduce((sum, e) => sum + e.headcount, 0)
+  const totalPoints = events.reduce((sum, e) => sum + e.pointsAwarded, 0)
 
   return (
-    <div style={{ maxWidth: '1000px', margin: '40px auto', padding: '20px', fontFamily: 'sans-serif' }}>
-      <h2 style={{ color: '#bf5700' }}>UT SHPE Attendance & Engagement Analytics</h2>
-      <p style={{ color: '#666' }}>High-level overview of chapter turnouts and point distributions for the Top 12 Executive Board.</p>
-      
-      <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '20px', textAlign: 'left' }}>
-        <thead>
-          <tr style={{ backgroundColor: '#f4f4f4', borderBottom: '2px solid #ccc' }}>
-            <th style={{ padding: '12px' }}>Event Title</th>
-            <th style={{ padding: '12px' }}>Type</th>
-            <th style={{ padding: '12px' }}>Date</th>
-            <th style={{ padding: '12px', color: '#bf5700' }}>True Headcount</th>
-            <th style={{ padding: '12px' }}>Total Points Distributed</th>
-            <th style={{ padding: '12px' }}>Multiplier</th>
-          </tr>
-        </thead>
-        <tbody>
-          {analyticsData.length === 0 ? (
-            <tr>
-              <td colSpan={6} style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
-                No active events found in your Supabase directory logs.
-              </td>
-            </tr>
+    <>
+      <AdminTopbar
+        title="Events"
+        subtitle={`${events.length} ${events.length === 1 ? 'event' : 'events'} · ${totalHeadcount.toLocaleString('en-US')} check-ins · ${totalPoints.toLocaleString('en-US')} points`}
+        action={<NewEventButton />}
+      />
+
+      <div className="min-w-0 flex-1 px-5 py-6 md:px-7">
+        <section className="overflow-hidden rounded-lg bg-surface shadow-card">
+          <div className="border-b border-hairline px-5 py-4">
+            <h2 className="font-display text-[15px] font-bold">
+              Attendance &amp; engagement
+            </h2>
+            <p className="mt-0.5 text-xs text-faint">
+              Every event the chapter has run, newest first.
+            </p>
+          </div>
+
+          {events.length === 0 ? (
+            <p className="px-5 py-12 text-center text-sm text-muted">
+              No events yet — create one to start tracking attendance.
+            </p>
           ) : (
-            analyticsData.map((event) => (
-              <tr key={event.id} style={{ borderBottom: '1px solid #eee' }}>
-                <td style={{ padding: '12px', fontWeight: 'bold' }}>{event.title}</td>
-                <td style={{ padding: '12px' }}>{event.event_type}</td>
-                <td style={{ padding: '12px' }}>
-                  {new Date(event.calendar_start).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric'
-                  })}
-                </td>
-                <td style={{ padding: '12px', fontWeight: 'bold', fontSize: '16px', color: '#bf5700' }}>
-                  {event.headcount} members
-                </td>
-                <td style={{ padding: '12px' }}>{event.totalPoints} pts</td>
-                <td style={{ padding: '12px', color: '#666' }}>{Number(event.multiplier).toFixed(1)}x</td>
-              </tr>
-            ))
+            <div className="overflow-x-auto">
+              <div className="min-w-[1000px]">
+                <div
+                  className={`grid ${COLS} bg-surface-2 px-5 py-[11px] text-[11px] font-bold tracking-[.05em] text-faint uppercase`}
+                >
+                  <span>Event</span>
+                  <span>Type</span>
+                  <span>Date</span>
+                  <span>Headcount</span>
+                  <span>Points given</span>
+                  <span>Mult.</span>
+                  <span>Code</span>
+                  <span className="text-right">Actions</span>
+                </div>
+
+                {events.map((event) => (
+                  <div
+                    key={event.id}
+                    className={`grid ${COLS} items-center border-t border-black/6 px-5 py-3.5 text-sm`}
+                  >
+                    <span className="flex min-w-0 items-center gap-2 pr-3">
+                      {event.isOpen && <LiveDot />}
+                      <span className="truncate font-bold">{event.title}</span>
+                    </span>
+                    <span className="truncate pr-3 text-muted">
+                      {categoryStyle(event.eventType).label}
+                    </span>
+                    <span className="text-muted">{formatDateLong(event.start)}</span>
+                    <span className="font-extrabold text-primary">{event.headcount}</span>
+                    <span className="text-muted">
+                      {formatPoints(event.pointsAwarded)} pts
+                    </span>
+                    <span className="text-muted">{event.multiplier.toFixed(1)}×</span>
+                    <span
+                      className={`font-mono font-bold tracking-[.1em] ${
+                        event.isOpen ? 'text-secondary' : 'text-[#A99E8F]'
+                      }`}
+                    >
+                      {event.accessCode}
+                    </span>
+                    <span className="flex justify-end">
+                      <DeleteEventButton
+                        eventId={event.id}
+                        title={event.title}
+                        headcount={event.headcount}
+                      />
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
-        </tbody>
-      </table>
-    </div>
-  );
+        </section>
+      </div>
+    </>
+  )
 }

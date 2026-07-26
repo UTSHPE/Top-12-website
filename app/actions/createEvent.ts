@@ -20,7 +20,7 @@ export async function createEvent(input: {
   multiplier: number
   isRecurring: boolean
   weekCount: number
-}) {
+}): Promise<{ codes: string[] }> {
   // Authorize: server actions POST to their host route, so the /admin/* proxy
   // wall covers this — but verify the session here too rather than relying on
   // the proxy alone (per Next.js data-security guidance).
@@ -51,4 +51,8 @@ export async function createEvent(input: {
 
   const { error } = await supabase.from('events').insert(rows)
   if (error) throw new Error(error.message)
+
+  // Hand the codes back so the officer can put the first one on a slide right
+  // away — that hand-off is the whole point of the create flow.
+  return { codes: rows.map((row) => row.access_code) }
 }
