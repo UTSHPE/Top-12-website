@@ -2,7 +2,14 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { FaCheck, FaRegCircleDot, FaRegClock, FaRegCopy, FaStar } from 'react-icons/fa6'
+import {
+  FaCheck,
+  FaRegCircleDot,
+  FaRegClock,
+  FaRegCopy,
+  FaStar,
+  FaTriangleExclamation,
+} from 'react-icons/fa6'
 import { createEvent } from '@/app/actions/createEvent'
 import { EVENT_TYPES } from '@/lib/events'
 import CodeDisplay from '@/components/CodeDisplay'
@@ -29,6 +36,7 @@ export default function CreateEventForm({ officerName }: { officerName: string }
 
   const [submitting, setSubmitting] = useState(false)
   const [codes, setCodes] = useState<string[] | null>(null)
+  const [calendarWarnings, setCalendarWarnings] = useState<string[]>([])
   const [errorMsg, setErrorMsg] = useState('')
 
   async function handleSubmit(e: React.FormEvent) {
@@ -37,7 +45,7 @@ export default function CreateEventForm({ officerName }: { officerName: string }
     setErrorMsg('')
 
     try {
-      const { codes } = await createEvent({
+      const { codes, calendarWarnings } = await createEvent({
         title,
         location,
         eventType,
@@ -51,6 +59,7 @@ export default function CreateEventForm({ officerName }: { officerName: string }
         isRecurring,
         weekCount: isRecurring ? weekCount : 1,
       })
+      setCalendarWarnings(calendarWarnings)
       setCodes(codes)
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Failed to create event.')
@@ -59,7 +68,14 @@ export default function CreateEventForm({ officerName }: { officerName: string }
     }
   }
 
-  if (codes) return <CodeGenerated codes={codes} eventTitle={title} />
+  if (codes)
+    return (
+      <CodeGenerated
+        codes={codes}
+        eventTitle={title}
+        calendarWarnings={calendarWarnings}
+      />
+    )
 
   return (
     <div className="mx-auto w-full max-w-[820px] px-5 py-6 md:px-7">
@@ -338,7 +354,15 @@ function DateField({
  * The officer-side signature moment: the code exists now, and the only thing
  * that matters is getting it in front of the room.
  */
-function CodeGenerated({ codes, eventTitle }: { codes: string[]; eventTitle: string }) {
+function CodeGenerated({
+  codes,
+  eventTitle,
+  calendarWarnings,
+}: {
+  codes: string[]
+  eventTitle: string
+  calendarWarnings: string[]
+}) {
   const [copied, setCopied] = useState(false)
   const code = codes[0]
 
@@ -376,6 +400,23 @@ function CodeGenerated({ codes, eventTitle }: { codes: string[]; eventTitle: str
               {codes.length} events created — each week has its own code, listed on the
               dashboard.
             </p>
+          )}
+
+          {/* The rows are saved either way, so this is a partial success, not a
+              failure — but it must never be silent. */}
+          {calendarWarnings.length > 0 && (
+            <div className="mb-5 flex items-start gap-2.5 rounded-md bg-warning/15 px-4 py-3 text-left">
+              <FaTriangleExclamation
+                aria-hidden
+                className="mt-0.5 size-3.5 flex-none text-warning-soft"
+              />
+              <p className="text-[13px] leading-snug text-warning-soft">
+                {calendarWarnings.length === codes.length && codes.length === 1
+                  ? "It wasn't added to the Google Calendar"
+                  : `${calendarWarnings.length} of these weren't added to the Google Calendar`}{' '}
+                — {calendarWarnings[0]} The check-in code still works.
+              </p>
+            </div>
           )}
 
           <div className="flex flex-wrap justify-center gap-2.5">

@@ -26,6 +26,9 @@
   --color-success: #137a45; /* points, "open now", success screen */
   --color-success-bg: #e7f4ec;
   --color-error: #c23b22;
+  --color-warning: #b26b00; /* partial success — e.g. saved, but not synced */
+  --color-warning-bg: #fdf1df;
+  --color-warning-soft: #efc98a; /* legible amber on ink surfaces */
   --color-gold: #e8b923;
   --color-silver: #c7cdd4;
   --color-bronze: #c77b3b;
