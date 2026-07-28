@@ -66,11 +66,17 @@ export async function createEvent(input: {
         calendarEnd: row.calendar_end,
       })
     } catch (err) {
-      console.error('Google Calendar insert failed:', {
-        title: row.title,
-        start: row.calendar_start,
-        reason: calendarErrorMessage(err),
-      })
+      // Log the full Google response body — the actionable reason (calendar not
+      // shared, API not enabled) lives there, not in err.message. Deliberately
+      // NOT dumping the whole error object: gaxios attaches `err.config`, which
+      // carries the Authorization header.
+      const body = (err as { response?: { data?: unknown } })?.response?.data
+      console.error(
+        '[gcal] insert failed:',
+        row.title,
+        row.calendar_start,
+        body ? JSON.stringify(body, null, 2) : calendarErrorMessage(err)
+      )
       calendarWarnings.push(calendarErrorMessage(err))
     }
   }
