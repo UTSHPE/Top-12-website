@@ -154,7 +154,7 @@ export default function CreateEventForm({ officerName }: { officerName: string }
                 value={createdByOfficer}
                 onChange={(e) => setCreatedByOfficer(e.target.value)}
                 required
-                placeholder="María García"
+                placeholder="Officer's full name"
                 className={INPUT}
               />
             </div>

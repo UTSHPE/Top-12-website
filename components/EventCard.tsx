@@ -3,6 +3,7 @@ import { categoryStyle, type ChapterEvent } from '@/lib/events'
 import { formatDay, formatDayTime, formatMonth, formatPoints } from '@/lib/format'
 import Avatar from '@/components/Avatar'
 import StatusPill from '@/components/StatusPill'
+import AddToCalendarLink from '@/components/AddToCalendarLink'
 
 /**
  * The member-facing event ticket: a tinted top block, a perforation with two
@@ -95,6 +96,11 @@ export default function EventCard({ event }: { event: ChapterEvent }) {
             +{formatPoints(event.points)}
           </span>
         </div>
+
+        <AddToCalendarLink
+          event={event}
+          className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-sm bg-tint-orange py-2.5 text-[13px] font-bold text-primary transition-colors hover:bg-[#f6e2cf]"
+        />
       </div>
     </article>
   )

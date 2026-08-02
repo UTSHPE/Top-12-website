@@ -1,6 +1,7 @@
 import { categoryStyle, type ChapterEvent } from '@/lib/events'
 import { formatDay, formatMonth, formatPoints, formatTime } from '@/lib/format'
 import { LiveDot } from '@/components/StatusPill'
+import AddToCalendarLink from '@/components/AddToCalendarLink'
 
 /**
  * Compact event row for narrow screens. The phone layout is designed for the
@@ -39,6 +40,11 @@ export default function EventRow({ event }: { event: ChapterEvent }) {
           {formatTime(event.start)}
           {event.location ? ` · ${event.location}` : ''}
         </div>
+        <AddToCalendarLink
+          event={event}
+          label="Add"
+          className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-bold text-primary"
+        />
       </div>
 
       <div className="flex-none text-right">
