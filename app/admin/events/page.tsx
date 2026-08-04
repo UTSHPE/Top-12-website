@@ -3,10 +3,11 @@ import { formatDateLong, formatPoints } from '@/lib/format'
 import AdminTopbar, { NewEventButton } from '@/app/admin/AdminTopbar'
 import { LiveDot } from '@/components/StatusPill'
 import DeleteEventButton from './DeleteEventButton'
+import CheckInToggle from './CheckInToggle'
 
 export const revalidate = 0
 
-const COLS = 'grid-cols-[2fr_1.1fr_1.2fr_.9fr_1fr_.7fr_1fr_120px]'
+const COLS = 'grid-cols-[2fr_1.1fr_1.2fr_.9fr_1fr_.7fr_1fr_130px_90px]'
 
 export default async function OfficerAnalyticsPage() {
   const events = await getAllEventsWithAttendance()
@@ -39,7 +40,7 @@ export default async function OfficerAnalyticsPage() {
             </p>
           ) : (
             <div className="overflow-x-auto">
-              <div className="min-w-[1000px]">
+              <div className="min-w-[1140px]">
                 <div
                   className={`grid ${COLS} bg-surface-2 px-5 py-[11px] text-[11px] font-bold tracking-[.05em] text-faint uppercase`}
                 >
@@ -50,6 +51,7 @@ export default async function OfficerAnalyticsPage() {
                   <span>Points given</span>
                   <span>Mult.</span>
                   <span>Code</span>
+                  <span>Check-in</span>
                   <span className="text-right">Actions</span>
                 </div>
 
@@ -77,6 +79,13 @@ export default async function OfficerAnalyticsPage() {
                       }`}
                     >
                       {event.accessCode}
+                    </span>
+                    <span>
+                      <CheckInToggle
+                        eventId={event.id}
+                        enabled={event.checkInEnabled}
+                        live={event.isOpen}
+                      />
                     </span>
                     <span className="flex justify-end">
                       <DeleteEventButton

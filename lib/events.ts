@@ -16,8 +16,13 @@ export type ChapterEvent = {
   multiplier: number
   /** What a member actually earns for showing up. */
   points: number
-  /** True while the check-in window contains "now". */
+  /** True when a code typed right now would be accepted: in window AND enabled. */
   isOpen: boolean
+  /**
+   * The officer's manual switch, independent of the clock. `isOpen` is what
+   * members experience; this is the toggle state the admin UI renders.
+   */
+  checkInEnabled: boolean
 }
 
 /**
@@ -123,10 +128,11 @@ type EventRow = {
   check_in_end: string
   base_points: number
   multiplier: number
+  is_open: boolean
 }
 
 const EVENT_COLUMNS =
-  'id, title, location, event_type, created_by_officer, access_code, calendar_start, calendar_end, check_in_start, check_in_end, base_points, multiplier'
+  'id, title, location, event_type, created_by_officer, access_code, calendar_start, calendar_end, check_in_start, check_in_end, base_points, multiplier, is_open'
 
 function toChapterEvent(row: EventRow, now: number): ChapterEvent {
   return {
@@ -143,9 +149,13 @@ function toChapterEvent(row: EventRow, now: number): ChapterEvent {
     basePoints: Number(row.base_points),
     multiplier: Number(row.multiplier),
     points: Number(row.base_points) * Number(row.multiplier),
+    // `is_open` can only close check-in early — it never extends the window,
+    // which is why it's an AND rather than an override.
     isOpen:
+      row.is_open !== false &&
       now >= new Date(row.check_in_start).getTime() &&
       now <= new Date(row.check_in_end).getTime(),
+    checkInEnabled: row.is_open !== false,
   }
 }
 
@@ -157,6 +167,7 @@ export async function getUpcomingEvents(limit = 24): Promise<ChapterEvent[]> {
   const { data } = await supabase
     .from('events')
     .select(EVENT_COLUMNS)
+    .is('deleted_at', null)
     .gte('calendar_end', now.toISOString())
     .order('calendar_start', { ascending: true })
     .limit(limit)
@@ -176,6 +187,8 @@ export async function getOpenEvent(): Promise<ChapterEvent | null> {
   const { data } = await supabase
     .from('events')
     .select(EVENT_COLUMNS)
+    .is('deleted_at', null)
+    .eq('is_open', true)
     .lte('check_in_start', iso)
     .gte('check_in_end', iso)
     .order('check_in_start', { ascending: false })
@@ -209,8 +222,12 @@ export async function getDashboardStats(recentLimit = 8): Promise<DashboardStats
   const now = new Date()
 
   const [{ data: eventRows }, { data: signIns }] = await Promise.all([
-    supabase.from('events').select(EVENT_COLUMNS).order('calendar_start', { ascending: false }),
-    supabase.from('sign_ins').select('event_id, points_earned'),
+    supabase
+      .from('events')
+      .select(EVENT_COLUMNS)
+      .is('deleted_at', null)
+      .order('calendar_start', { ascending: false }),
+    supabase.from('sign_ins').select('event_id, points_earned').is('deleted_at', null),
   ])
 
   const headcounts = new Map<string, number>()

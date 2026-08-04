@@ -38,14 +38,25 @@ export default function MemberNav() {
             </Link>
           )
         })}
+        {/* Check-in is the one thing a member does under time pressure, in a
+            room, on a phone — so it keeps the filled button and the officer
+            link steps back to text. */}
+        <Link
+          href="/checkin"
+          aria-current={pathname.startsWith('/checkin') ? 'page' : undefined}
+          className="flex-none rounded-sm bg-primary-bright px-3 py-2 font-bold text-white transition-colors hover:bg-primary-hover sm:px-4 sm:py-2.5"
+        >
+          Check in
+        </Link>
+
         {/* Points at the console, not the login form: the /admin proxy bounces
             signed-out visitors to /login and lets signed-in officers straight
             through, so one link is correct in both cases. */}
         <Link
           href="/admin"
-          className="flex-none rounded-sm bg-primary-bright px-3 py-2 font-bold text-white transition-colors hover:bg-primary-hover sm:px-4 sm:py-2.5"
+          className="ncta hidden flex-none sm:inline"
         >
-          Officer sign in
+          Officer
         </Link>
       </nav>
     </header>
