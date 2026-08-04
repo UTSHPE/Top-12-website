@@ -4,8 +4,7 @@ import { useRef, useState } from 'react'
 import Link from 'next/link'
 import { FaCheck, FaCircleInfo } from 'react-icons/fa6'
 import { formatPoints } from '@/lib/format'
-
-const CODE_LENGTH = 6
+import { CODE_LENGTH, keepCodeChars } from '@/lib/accessCodeFormat'
 
 type Success = {
   duplicate: boolean
@@ -47,15 +46,15 @@ export default function CheckInForm({ initialCode = '' }: { initialCode?: string
   }
 
   function handleBoxChange(index: number, raw: string) {
-    const letters = raw.replace(/[^a-zA-Z]/g, '').toUpperCase()
-    if (!letters) return
+    const typed = keepCodeChars(raw)
+    if (!typed) return
 
     // One field accepts a whole pasted code — people paste all six at once.
     const next = [...chars]
-    for (let i = 0; i < letters.length && index + i < CODE_LENGTH; i++) {
-      next[index + i] = letters[i]!
+    for (let i = 0; i < typed.length && index + i < CODE_LENGTH; i++) {
+      next[index + i] = typed[i]!
     }
-    writeChars(next, index + letters.length)
+    writeChars(next, index + typed.length)
   }
 
   function handleKeyDown(index: number, e: React.KeyboardEvent<HTMLInputElement>) {
@@ -78,10 +77,10 @@ export default function CheckInForm({ initialCode = '' }: { initialCode?: string
   }
 
   function handlePaste(e: React.ClipboardEvent<HTMLInputElement>) {
-    const letters = e.clipboardData.getData('text').replace(/[^a-zA-Z]/g, '').toUpperCase()
-    if (!letters) return
+    const pasted = keepCodeChars(e.clipboardData.getData('text'))
+    if (!pasted) return
     e.preventDefault()
-    writeChars(padCode(letters), letters.length)
+    writeChars(padCode(pasted), pasted.length)
   }
 
   async function submit(e: React.FormEvent) {
@@ -158,13 +157,14 @@ export default function CheckInForm({ initialCode = '' }: { initialCode?: string
               autoCapitalize="characters"
               autoCorrect="off"
               spellCheck={false}
-              aria-label={`Code letter ${i + 1}`}
+              aria-label={`Code character ${i + 1} of ${CODE_LENGTH}`}
               className="h-[58px] w-full min-w-0 rounded-md border-2 border-line bg-surface-2 text-center font-mono text-[26px] font-bold uppercase caret-primary focus:border-primary focus:bg-surface focus:outline-none sm:h-16 sm:text-[30px]"
             />
           ))}
         </div>
         <p className="mt-2 text-xs text-faint">
-          Six letters, shown on the slide. You can paste the whole code.
+          Six characters, letters and numbers, shown on the slide. You can paste
+          the whole code.
         </p>
       </fieldset>
 
@@ -230,6 +230,6 @@ function SuccessCard({ result }: { result: Success }) {
 
 /** Normalize any starting value into exactly CODE_LENGTH slots. */
 function padCode(raw: string): string[] {
-  const letters = raw.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, CODE_LENGTH)
-  return Array.from({ length: CODE_LENGTH }, (_, i) => letters[i] ?? '')
+  const chars = keepCodeChars(raw).slice(0, CODE_LENGTH)
+  return Array.from({ length: CODE_LENGTH }, (_, i) => chars[i] ?? '')
 }
