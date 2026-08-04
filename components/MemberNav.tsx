@@ -56,7 +56,7 @@ export default function MemberNav() {
           href="/admin"
           className="ncta hidden flex-none sm:inline"
         >
-          Officer
+          Officer sign in
         </Link>
       </nav>
     </header>
