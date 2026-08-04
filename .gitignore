@@ -32,6 +32,15 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+.env*.local
+
+# Google service-account keys — downloaded as <project>-<keyid>.json.
+# These must never enter the repo; the bot credential belongs in
+# GOOGLE_CREDENTIALS_B64 (env var), not in a file.
+*-*.json
+!package-lock.json
+service-account*.json
+gcp-*.json
 
 # vercel
 .vercel

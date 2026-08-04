@@ -19,8 +19,10 @@ export type LeaderboardEntry = {
 export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
   const supabase = createAdminClient()
 
+  // Soft-deleted check-ins are stamped when their event is deleted, so this
+  // single filter is what keeps a deleted event's points off the board.
   const [{ data: signIns }, { data: members }] = await Promise.all([
-    supabase.from('sign_ins').select('eid, points_earned'),
+    supabase.from('sign_ins').select('eid, points_earned').is('deleted_at', null),
     supabase.from('members').select('eid, first_name, last_name, major, Class'),
   ])
 
