@@ -12,6 +12,17 @@ const LINKS = [
   { href: '/leaderboard', label: 'Leaderboard', phone: true },
 ]
 
+/**
+ * The nav's filled-button treatment, shared by both CTAs so they can't drift.
+ *
+ * Colors come from the theme tokens rather than literals — `primary-bright` is
+ * the CTA orange and `primary-hover` its hover state, both declared in
+ * globals.css. The focus ring is not here on purpose: globals.css styles
+ * `:focus-visible` globally, so both links already share one.
+ */
+const NAV_BUTTON =
+  'flex-none rounded-sm bg-primary-bright px-3 py-2 font-bold text-white transition-colors hover:bg-primary-hover sm:px-4 sm:py-2.5'
+
 export default function MemberNav() {
   const pathname = usePathname()
 
@@ -38,26 +49,26 @@ export default function MemberNav() {
             </Link>
           )
         })}
-        {/* Check-in is the one thing a member does under time pressure, in a
-            room, on a phone — so it keeps the filled button and the officer
-            link steps back to text. */}
-        <Link
-          href="/checkin"
-          aria-current={pathname.startsWith('/checkin') ? 'page' : undefined}
-          className="flex-none rounded-sm bg-primary-bright px-3 py-2 font-bold text-white transition-colors hover:bg-primary-hover sm:px-4 sm:py-2.5"
-        >
-          Check in
-        </Link>
+        {/* Both CTAs sit in their own group: the nav's 26px rhythm is spaced
+            for text links and reads as a gap between two adjacent filled
+            buttons, so the pair gets a tighter gap of its own. */}
+        <span className="flex items-center gap-2 sm:gap-2.5">
+          <Link
+            href="/checkin"
+            aria-current={pathname.startsWith('/checkin') ? 'page' : undefined}
+            className={NAV_BUTTON}
+          >
+            Check in
+          </Link>
 
-        {/* Points at the console, not the login form: the /admin proxy bounces
-            signed-out visitors to /login and lets signed-in officers straight
-            through, so one link is correct in both cases. */}
-        <Link
-          href="/admin"
-          className="ncta hidden flex-none sm:inline"
-        >
-          Officer
-        </Link>
+          {/* Points at the console, not the login form: the /admin proxy
+              bounces signed-out visitors to /login and lets signed-in officers
+              straight through, so one link is correct in both cases. Stays
+              hidden on phones — the row has to fit a 320px viewport. */}
+          <Link href="/admin" className={`${NAV_BUTTON} hidden sm:inline-flex`}>
+            Officer sign in
+          </Link>
+        </span>
       </nav>
     </header>
   )

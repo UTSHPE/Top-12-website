@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     return fail(400, 'invalid_request', 'Enter your UT EID.')
   }
   if (!rawCode.trim() || rawCode.length > 32) {
-    return fail(400, 'invalid_request', 'Enter the 6-letter code from the slide.')
+    return fail(400, 'invalid_request', 'Enter the 6-character code from the slide.')
   }
 
   let result

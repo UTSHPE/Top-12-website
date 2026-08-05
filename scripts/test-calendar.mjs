@@ -2,88 +2,79 @@
  * Isolated Google Calendar bridge check — runs OUTSIDE Next.js so an auth or
  * permission problem can be told apart from a framework/request problem.
  *
- * Usage:  npm run test:calendar
+ * Usage:  node --env-file=.env.local scripts/test-calendar.mjs
  *
- * Reads everything from .env.local. Never hardcode credentials here, and never
- * print key material — `client_email` is the only credential field echoed,
- * because you need it to share the calendar with the bot.
+ * Reads everything from the environment. Never hardcode credentials here —
+ * this repository is public.
  */
-import dotenv from 'dotenv'
-import { google } from 'googleapis'
+import { google } from 'googleapis';
 
-dotenv.config({ path: '.env.local' })
+const CALENDAR_ID = process.env.GOOGLE_CALENDAR_ID;
 
-const CALENDAR_TIME_ZONE = 'America/Chicago'
-
-function fail(step, err) {
-  const body = err?.response?.data
-  console.error(`\n❌ ${step}`)
-  console.error(body ? JSON.stringify(body, null, 2) : (err?.message ?? String(err)))
-  process.exit(1)
-}
-
-// --- Step 0: decode the credential (presence and shape only) ---
-const b64 = process.env.GOOGLE_CREDENTIALS_B64
-if (!b64) fail('GOOGLE_CREDENTIALS_B64 is not set', new Error('Check .env.local exists and is saved.'))
-
-const calendarId = process.env.GOOGLE_CALENDAR_ID
-if (!calendarId) fail('GOOGLE_CALENDAR_ID is not set', new Error('Check .env.local.'))
-
-let creds
-try {
-  creds = JSON.parse(Buffer.from(b64, 'base64').toString('utf8'))
-} catch (err) {
-  fail('GOOGLE_CREDENTIALS_B64 did not decode to JSON — it is probably truncated or wrapped across multiple lines in .env.local', err)
-}
-
-console.log('bot client_email:', creds.client_email)
-console.log('calendar id:     ', calendarId)
-console.log('')
+// --- Step 0: environment shape (presence only, never key material) ---
+console.log('client_email:', process.env.GOOGLE_CLIENT_EMAIL ?? 'MISSING');
+console.log('calendar_id present:', Boolean(CALENDAR_ID));
+console.log('private_key present:', Boolean(process.env.GOOGLE_PRIVATE_KEY));
+console.log('private_key length:', process.env.GOOGLE_PRIVATE_KEY?.length);
+console.log('has literal \\n:', process.env.GOOGLE_PRIVATE_KEY?.includes('\\n'));
+console.log('has real newline:', process.env.GOOGLE_PRIVATE_KEY?.includes('\n'));
+console.log('starts correctly:', process.env.GOOGLE_PRIVATE_KEY?.startsWith('-----BEGIN'));
+console.log('');
 
 const auth = new google.auth.JWT({
-  email: creds.client_email,
-  key: creds.private_key, // real newlines already, courtesy of JSON.parse
+  email: process.env.GOOGLE_CLIENT_EMAIL,
+  key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
   scopes: ['https://www.googleapis.com/auth/calendar'],
-})
+});
 
-const cal = google.calendar({ version: 'v3', auth })
+const cal = google.calendar({ version: 'v3', auth });
 
-// --- Step 1: read the target calendar's metadata ---
-let meta
+// --- Step A: does authentication work at all? ---
 try {
-  meta = await cal.calendars.get({ calendarId })
-  console.log(`✅ READ    ${meta.data.summary} (tz: ${meta.data.timeZone})`)
+  await auth.authorize();
+  console.log('AUTH OK');
 } catch (err) {
-  fail('READ failed — could not fetch calendar metadata', err)
+  console.error('AUTH FAILED:', err?.response?.data ?? err.message);
+  process.exit(1);
 }
 
-// --- Step 2: insert a throwaway event about an hour out ---
-const start = new Date(Date.now() + 60 * 60 * 1000)
-const end = new Date(start.getTime() + 30 * 60 * 1000)
+// --- Step B: what calendars can this service account actually see? ---
+const list = await cal.calendarList.list();
+console.log('VISIBLE CALENDARS:');
+console.log(
+  (list.data.items ?? [])
+    .map((c) => `  ${(c.accessRole ?? '?').padEnd(10)} ${c.summary} — ${c.id}`)
+    .join('\n') || '  (none)'
+);
 
-let eventId
+// --- Step C: can it read the target calendar directly? ---
+try {
+  const meta = await cal.calendars.get({ calendarId: CALENDAR_ID });
+  console.log('TARGET CALENDAR OK:', meta.data.summary, '| tz:', meta.data.timeZone);
+} catch (err) {
+  console.error('TARGET CALENDAR FAILED:', err?.response?.status, err?.response?.data ?? err.message);
+  process.exit(1);
+}
+
+// --- Step D: can it write? ---
 try {
   const res = await cal.events.insert({
-    calendarId,
+    calendarId: CALENDAR_ID,
     requestBody: {
       summary: 'TEST — safe to delete',
       description: 'Created by scripts/test-calendar.mjs',
-      start: { dateTime: start.toISOString(), timeZone: CALENDAR_TIME_ZONE },
-      end: { dateTime: end.toISOString(), timeZone: CALENDAR_TIME_ZONE },
+      start: { dateTime: '2026-09-14T18:00:00', timeZone: 'America/Chicago' },
+      end: { dateTime: '2026-09-14T19:00:00', timeZone: 'America/Chicago' },
     },
-  })
-  eventId = res.data.id
-  console.log(`✅ INSERT  ${res.data.htmlLink}`)
-} catch (err) {
-  fail('INSERT failed — the bot can read the calendar but not write to it', err)
-}
+  });
+  console.log('INSERT OK');
+  console.log('  event id:', res.data.id);
+  console.log('  landed on:', res.data.organizer?.email);
+  console.log('  link:', res.data.htmlLink);
 
-// --- Step 3: clean up so the shared calendar is not littered ---
-try {
-  await cal.events.delete({ calendarId, eventId })
-  console.log('✅ DELETE  test event removed')
+  // Clean up after ourselves so the shared calendar is not littered.
+  await cal.events.delete({ calendarId: CALENDAR_ID, eventId: res.data.id });
+  console.log('  test event deleted');
 } catch (err) {
-  fail(`DELETE failed — remove event ${eventId} by hand`, err)
+  console.error('INSERT FAILED:', err?.response?.status, err?.response?.data ?? err.message);
 }
-
-console.log('\nGoogle Calendar bridge is working.')

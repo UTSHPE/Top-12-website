@@ -1,7 +1,5 @@
 import crypto from 'crypto'
-
-const ALPHABET = 'ABCDEFGHJKMNPQRTUVWXYZ23469'
-const CODE_LENGTH = 6
+import { CODE_ALPHABET as ALPHABET, CODE_LENGTH } from '@/lib/accessCodeFormat'
 
 export function generateAccessCode(): string {
   const alphabetLen = ALPHABET.length
