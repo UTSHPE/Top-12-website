@@ -74,13 +74,30 @@ const CATEGORY_STYLES: Record<CategoryKey, Omit<CategoryStyle, 'label'>> = {
   },
 }
 
-/** Event types the create form offers, in the order officers see them. */
+/**
+ * Event types the create form offers, in the order officers see them.
+ *
+ * These strings ARE the stored values — the select renders each as both the
+ * option label and its `value`, and `events.event_type` holds them verbatim.
+ * Never reword or reformat an entry that has shipped: existing rows carry the
+ * old spelling and would stop matching their category and filter chip.
+ *
+ * Grouped by what the chapter runs together rather than alphabetized, with
+ * `Other` last as the catch-all.
+ */
 export const EVENT_TYPES = [
   'General Meeting',
-  'Study Night',
+  'Chapter Event',
   'Professional Development',
-  'Social',
+  'Technical Development',
+  'Academic Development',
+  'Study Night',
+  'Road to Convention (RTC)',
+  'Site Visit',
+  'SHPEtina',
   'Community Service',
+  'Social',
+  'Fundraiser/Profit Share',
   'Other',
 ] as const
 
