@@ -29,6 +29,7 @@ export default function DeleteEventButton({
   const [open, setOpen] = useState(false)
   const [typed, setTyped] = useState('')
   const [error, setError] = useState('')
+  const [warning, setWarning] = useState('')
   const [pending, startTransition] = useTransition()
   const router = useRouter()
 
@@ -38,6 +39,8 @@ export default function DeleteEventButton({
     setOpen(false)
     setTyped('')
     setError('')
+    setWarning('')
+    router.refresh()
   }
 
   function remove() {
@@ -45,9 +48,17 @@ export default function DeleteEventButton({
     setError('')
     startTransition(async () => {
       try {
-        await deleteEvent(eventId, typed)
+        const { calendarWarning } = await deleteEvent(eventId, typed)
+
+        // The delete succeeded either way. If the calendar entry outlived it,
+        // hold the dialog open so the officer actually reads why, instead of
+        // the notice vanishing with the row on refresh.
+        if (calendarWarning) {
+          setWarning(calendarWarning)
+          return
+        }
+
         close()
-        router.refresh()
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Delete failed.')
       }
@@ -64,6 +75,42 @@ export default function DeleteEventButton({
       >
         <FaTrash aria-hidden className="size-3.5" />
       </button>
+    )
+  }
+
+  // The event is already gone at this point — this reports the one part that
+  // did not happen, in amber rather than red.
+  if (warning) {
+    return (
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Event deleted, calendar not updated"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 px-5"
+      >
+        <div className="w-full max-w-[420px] rounded-lg bg-surface p-6 text-left shadow-shell">
+          <div className="mb-5 flex items-start gap-3">
+            <span className="flex size-9 flex-none items-center justify-center rounded-full bg-warning/10">
+              <FaTriangleExclamation aria-hidden className="size-4 text-warning" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="font-display text-[17px] leading-tight font-bold">
+                Event deleted
+              </h2>
+              <p className="mt-1 text-sm text-body">{warning}</p>
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <button
+              onClick={close}
+              autoFocus
+              className="rounded-sm bg-primary-bright px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-primary-hover"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      </div>
     )
   }
 

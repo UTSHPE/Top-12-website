@@ -64,3 +64,25 @@ export async function insertCalendarEvent(input: {
 
   return res.data.id
 }
+
+/**
+ * Remove a single event from the chapter calendar.
+ *
+ * 404 and 410 are treated as success: the entry is already gone, which is the
+ * outcome the caller wanted. Google returns 404 for an id it has never seen and
+ * 410 ("Resource has been deleted") for one deleted previously.
+ *
+ * Anything else throws — callers decide whether that is fatal. It is not fatal
+ * for event deletion, which must complete regardless.
+ */
+export async function deleteCalendarEvent(eventId: string): Promise<void> {
+  try {
+    await calendar.events.delete({ calendarId: CALENDAR_ID, eventId })
+  } catch (err) {
+    const status =
+      (err as { code?: number })?.code ??
+      (err as { response?: { status?: number } })?.response?.status
+    if (status === 404 || status === 410) return
+    throw err
+  }
+}
