@@ -50,7 +50,12 @@ export async function createEvent(input: {
     recurrence_group_id,
   }))
 
-  const { error } = await supabase.from('events').insert(rows)
+  // `.select()` so each new row's id comes back — the Calendar loop below needs
+  // it to record which calendar entry belongs to which event.
+  const { data: insertedRows, error } = await supabase
+    .from('events')
+    .insert(rows)
+    .select('id, access_code')
   if (error) throw new Error(error.message)
 
   // Mirror onto the chapter Google Calendar. The rows are already committed, so
@@ -58,8 +63,9 @@ export async function createEvent(input: {
   // but it must never be silent, which is what hid this bug for an afternoon.
   const calendarWarnings: string[] = []
   for (const row of rows) {
+    let googleEventId: string | null | undefined
     try {
-      await insertCalendarEvent({
+      googleEventId = await insertCalendarEvent({
         title: row.title,
         location: row.location,
         calendarStart: row.calendar_start,
@@ -78,6 +84,31 @@ export async function createEvent(input: {
         body ? JSON.stringify(body, null, 2) : calendarErrorMessage(err)
       )
       calendarWarnings.push(calendarErrorMessage(err))
+    }
+
+    // Record which calendar entry this row created, so deleting the event can
+    // remove it too. Deliberately outside the try above: this is a database
+    // write, and a failure here is not a Calendar failure.
+    //
+    // Never fatal. The rows and the calendar entries both already exist — an
+    // untracked calendar entry is a far better outcome than failing creation
+    // after the fact. It just has to be deleted by hand later.
+    if (googleEventId) {
+      const insertedId = insertedRows?.find((r) => r.access_code === row.access_code)?.id
+      if (insertedId) {
+        const { error: linkError } = await supabase
+          .from('events')
+          .update({ google_event_id: googleEventId })
+          .eq('id', insertedId)
+
+        if (linkError) {
+          console.error(
+            '[gcal] created the calendar entry but could not store its id:',
+            row.title,
+            linkError.message
+          )
+        }
+      }
     }
   }
 

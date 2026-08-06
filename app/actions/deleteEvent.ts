@@ -4,7 +4,15 @@ import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 
-export type DeleteEventResult = { deletedSignIns: number }
+export type DeleteEventResult = {
+  deletedSignIns: number
+  /**
+   * Set when the event was deleted but its Google Calendar entry could not be
+   * removed. The delete still succeeded — this is shown as a warning, not an
+   * error, so an officer knows to tidy the calendar by hand.
+   */
+  calendarWarning: string | null
+}
 
 /**
  * Soft-delete an event and every check-in recorded against it.
@@ -38,7 +46,7 @@ export async function deleteEvent(
 
   const { data: event, error: lookupError } = await supabase
     .from('events')
-    .select('id, title')
+    .select('id, title, google_event_id')
     .eq('id', eventId)
     .is('deleted_at', null)
     .maybeSingle()
@@ -72,10 +80,38 @@ export async function deleteEvent(
   // rather than leaving the officer thinking the delete worked.
   if (eventError) throw new Error(eventError.message)
 
+  // Only now, with the database already updated, mirror the removal onto the
+  // chapter calendar. Deliberately last and deliberately non-fatal: a Google
+  // outage must never leave an officer unable to delete an event.
+  //
+  // Imported dynamically because lib/google/calendar.ts validates its env vars
+  // at module scope — a static import would make a calendar misconfiguration
+  // throw while this action is merely being loaded, taking deletion down with
+  // it. Here, that same failure lands in the catch as a warning.
+  let calendarWarning: string | null = null
+
+  if (event.google_event_id) {
+    try {
+      const { deleteCalendarEvent } = await import('@/lib/google/calendar')
+      await deleteCalendarEvent(event.google_event_id)
+    } catch (err) {
+      // Read the reason inline rather than importing calendarErrorMessage:
+      // the failure being handled here may BE the module failing to load, and
+      // a second import would throw straight back out of this catch.
+      const reason =
+        (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data
+          ?.error?.message ??
+        (err instanceof Error ? err.message : 'Unknown Google Calendar error')
+
+      console.error('[gcal] delete failed:', event.title, reason)
+      calendarWarning = `The event was deleted, but its Google Calendar entry could not be removed (${reason}). Remove it by hand.`
+    }
+  }
+
   revalidatePath('/admin/events')
   revalidatePath('/admin')
   revalidatePath('/events')
   revalidatePath('/leaderboard')
 
-  return { deletedSignIns: removed?.length ?? 0 }
+  return { deletedSignIns: removed?.length ?? 0, calendarWarning }
 }
