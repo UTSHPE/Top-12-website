@@ -75,29 +75,36 @@ const CATEGORY_STYLES: Record<CategoryKey, Omit<CategoryStyle, 'label'>> = {
 }
 
 /**
- * Event types the create form offers, in the order officers see them.
+ * The committees the create form offers, in the order officers see them.
  *
- * These strings ARE the stored values — the select renders each as both the
- * option label and its `value`, and `events.event_type` holds them verbatim.
- * Never reword or reformat an entry that has shipped: existing rows carry the
- * old spelling and would stop matching their category and filter chip.
+ * Presented to officers as "Committee". The database column stays
+ * `events.event_type` — renaming it would need a migration and would break
+ * every query that reads it, so the rename is display-only.
  *
- * Grouped by what the chapter runs together rather than alphabetized, with
- * `Other` last as the catch-all.
+ * These strings ARE the stored values: the select renders each as both the
+ * option label and its `value`, and the column holds them verbatim. Never
+ * reword or reformat an entry that has shipped — existing rows carry the old
+ * spelling and would stop matching their category.
+ *
+ * Values dropped from this list are deliberately NOT migrated. Rows still
+ * holding 'Study Night', 'Social', 'Community Service', 'Road to Convention
+ * (RTC)', 'Chapter Event', 'Site Visit' or 'Fundraiser/Profit Share' keep them
+ * and keep rendering — `categoryKey` and `shortLabel` below both fall through
+ * to a default, so an unlisted value degrades to an orange badge rather than
+ * blank. They simply can't be chosen for a new event.
  */
 export const EVENT_TYPES = [
   'General Meeting',
-  'Chapter Event',
   'Professional Development',
   'Technical Development',
+  'Leadership',
+  'VPI',
+  'VPE',
+  'Chapter Development',
+  'Community Outreach',
   'Academic Development',
-  'Study Night',
-  'Road to Convention (RTC)',
-  'Site Visit',
   'SHPEtina',
-  'Community Service',
-  'Social',
-  'Fundraiser/Profit Share',
+  'Fundraiser (Treasury)',
   'Other',
 ] as const
 
@@ -109,6 +116,10 @@ export const FILTERS = [
   'Social',
 ] as const
 
+// 'Study Night' and 'Social' are no longer offered on the create form, but rows
+// created before the committee list changed still hold them. Keep these cases:
+// removing them would not break anything loudly, it would just quietly demote
+// those events to the orange default.
 function categoryKey(eventType: string): CategoryKey {
   switch (eventType) {
     case 'Professional Development':
