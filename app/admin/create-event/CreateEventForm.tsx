@@ -123,8 +123,10 @@ export default function CreateEventForm({ officerName }: { officerName: string }
                 />
               </div>
               <div>
+                {/* Labelled "Committee" for officers; the value still lands in
+                    events.event_type, which keeps its name. */}
                 <label className={LABEL} htmlFor="eventType">
-                  Type
+                  Committee
                 </label>
                 <select
                   id="eventType"
@@ -134,7 +136,7 @@ export default function CreateEventForm({ officerName }: { officerName: string }
                   className={INPUT}
                 >
                   <option value="" disabled>
-                    Select type
+                    Select committee
                   </option>
                   {EVENT_TYPES.map((type) => (
                     <option key={type} value={type}>
