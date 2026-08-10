@@ -1,4 +1,4 @@
-import { categoryStyle, type ChapterEvent } from '@/lib/events'
+import { categoryStyle, committeeLabel, type ChapterEvent } from '@/lib/events'
 import { formatDay, formatMonth, formatPoints, formatTime } from '@/lib/format'
 import { LiveDot } from '@/components/StatusPill'
 
@@ -32,7 +32,7 @@ export default function EventRow({ event }: { event: ChapterEvent }) {
           className="text-[10px] font-bold uppercase"
           style={{ color: category.accent }}
         >
-          {category.label}
+          {committeeLabel(event)}
         </div>
         <h3 className="font-display my-px text-[15px] font-bold">{event.title}</h3>
         <div className="text-xs text-muted">

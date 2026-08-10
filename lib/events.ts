@@ -5,6 +5,8 @@ export type ChapterEvent = {
   title: string
   location: string
   eventType: string
+  /** Co-hosting committee for a joint event, or null for a single host. */
+  secondaryEventType: string | null
   host: string
   accessCode: string
   /** ISO strings — Dates don't survive the server/client boundary cleanly. */
@@ -142,12 +144,36 @@ export function categoryStyle(eventType: string): CategoryStyle {
   return { label: shortLabel(eventType), ...CATEGORY_STYLES[categoryKey(eventType)] }
 }
 
+/** The committee pair as one string: "Professional + SHPEtina", or just the one. */
+export function committeeLabel(
+  event: Pick<ChapterEvent, 'eventType' | 'secondaryEventType'>
+): string {
+  const primary = shortLabel(event.eventType)
+  if (!event.secondaryEventType) return primary
+  return `${primary} + ${shortLabel(event.secondaryEventType)}`
+}
+
+/**
+ * Does this event belong to the given committee?
+ *
+ * Matches either slot. A joint event has to surface for BOTH of its committees
+ * — checking only `eventType` would hide it from the co-host, which is the
+ * whole reason the second field exists.
+ */
+export function matchesCommittee(
+  event: Pick<ChapterEvent, 'eventType' | 'secondaryEventType'>,
+  committee: string
+): boolean {
+  return event.eventType === committee || event.secondaryEventType === committee
+}
+
 // Supabase row shape for the columns we select.
 type EventRow = {
   id: string
   title: string
   location: string | null
   event_type: string | null
+  secondary_event_type: string | null
   created_by_officer: string | null
   access_code: string
   calendar_start: string
@@ -160,7 +186,7 @@ type EventRow = {
 }
 
 const EVENT_COLUMNS =
-  'id, title, location, event_type, created_by_officer, access_code, calendar_start, calendar_end, check_in_start, check_in_end, base_points, multiplier, is_open'
+  'id, title, location, event_type, secondary_event_type, created_by_officer, access_code, calendar_start, calendar_end, check_in_start, check_in_end, base_points, multiplier, is_open'
 
 function toChapterEvent(row: EventRow, now: number): ChapterEvent {
   return {
@@ -168,6 +194,9 @@ function toChapterEvent(row: EventRow, now: number): ChapterEvent {
     title: row.title,
     location: row.location ?? '',
     eventType: row.event_type ?? 'Other',
+    // Empty string is normalized to NULL on write, but coalesce anyway so a row
+    // touched outside the app can't put '' in front of the display helpers.
+    secondaryEventType: row.secondary_event_type || null,
     host: row.created_by_officer ?? '',
     accessCode: row.access_code,
     start: row.calendar_start,

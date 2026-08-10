@@ -1,4 +1,4 @@
-import { categoryStyle, getAllEventsWithAttendance } from '@/lib/events'
+import { committeeLabel, getAllEventsWithAttendance } from '@/lib/events'
 import { formatDateLong, formatPoints } from '@/lib/format'
 import AdminTopbar, { NewEventButton } from '@/app/admin/AdminTopbar'
 import { LiveDot } from '@/components/StatusPill'
@@ -65,7 +65,7 @@ export default async function OfficerAnalyticsPage() {
                       <span className="truncate font-bold">{event.title}</span>
                     </span>
                     <span className="truncate pr-3 text-muted">
-                      {categoryStyle(event.eventType).label}
+                      {committeeLabel(event)}
                     </span>
                     <span className="text-muted">{formatDateLong(event.start)}</span>
                     <span className="font-extrabold text-primary">{event.headcount}</span>
