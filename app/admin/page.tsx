@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { categoryStyle, getDashboardStats } from '@/lib/events'
+import { committeeLabel, getDashboardStats } from '@/lib/events'
 import { currentSeason, formatDate, greeting } from '@/lib/format'
 import { getOfficer } from '@/lib/officer'
 import { LiveDot } from '@/components/StatusPill'
@@ -95,7 +95,7 @@ export default async function OfficerDashboardPage() {
                   >
                     <span className="truncate pr-3 font-bold">{event.title}</span>
                     <span className="truncate pr-3 text-muted">
-                      {categoryStyle(event.eventType).label}
+                      {committeeLabel(event)}
                     </span>
                     <span className="text-muted">{formatDate(event.start)}</span>
                     <span className="font-extrabold text-primary">{event.headcount}</span>

@@ -1,5 +1,5 @@
 import { FaRegClock, FaLocationDot } from 'react-icons/fa6'
-import { categoryStyle, type ChapterEvent } from '@/lib/events'
+import { categoryStyle, committeeLabel, type ChapterEvent } from '@/lib/events'
 import { formatDay, formatDayTime, formatMonth, formatPoints } from '@/lib/format'
 import Avatar from '@/components/Avatar'
 import StatusPill from '@/components/StatusPill'
@@ -41,7 +41,7 @@ export default function EventCard({ event }: { event: ChapterEvent }) {
               className="text-[11px] font-extrabold tracking-[.05em] uppercase"
               style={{ color: category.accent }}
             >
-              {category.label}
+              {committeeLabel(event)}
             </div>
             <div
               className="mt-[3px] flex items-center gap-1.5 text-xs"

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { FaSliders } from 'react-icons/fa6'
-import { FILTERS, type ChapterEvent } from '@/lib/events'
+import { FILTERS, matchesCommittee, type ChapterEvent } from '@/lib/events'
 import EventCard from '@/components/EventCard'
 import EventRow from '@/components/EventRow'
 
@@ -16,7 +16,9 @@ const chipLabel = (value: string) =>
 export default function EventsBrowser({ events }: { events: ChapterEvent[] }) {
   const [filter, setFilter] = useState<string>(ALL)
 
-  const visible = filter === ALL ? events : events.filter((e) => e.eventType === filter)
+  // Matches either committee, so a joint event shows up under both of its hosts.
+  const visible =
+    filter === ALL ? events : events.filter((e) => matchesCommittee(e, filter))
 
   return (
     <div className="mx-auto w-full max-w-[1100px] px-5 py-6 sm:px-[30px] sm:py-[30px]">

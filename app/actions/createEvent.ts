@@ -12,6 +12,8 @@ export async function createEvent(input: {
   title: string
   location: string
   eventType: string
+  /** Co-hosting committee. Blank/absent means a single-committee event. */
+  secondaryEventType?: string
   createdByOfficer: string
   calendarStart: Date
   calendarEnd: Date
@@ -33,12 +35,35 @@ export async function createEvent(input: {
 
   const supabase = createAdminClient()
 
+  // Committees, settled server-side. The form enforces most of this, but a
+  // server action is a public endpoint and cannot trust what reaches it.
+  //
+  // Blank becomes null rather than '': an empty-string committee would slip
+  // past every `is not null` check and break grouping and filtering.
+  let primaryCommittee: string | null = input.eventType?.trim() || null
+  let secondaryCommittee: string | null = input.secondaryEventType?.trim() || null
+
+  // Only the co-host was chosen. Promote it rather than rejecting: the result
+  // an officer meant is a single-committee event, and erroring on a state the
+  // form cannot even produce would be noise. Promotion is why these are `let`.
+  if (!primaryCommittee && secondaryCommittee) {
+    primaryCommittee = secondaryCommittee
+    secondaryCommittee = null
+  }
+
+  if (!primaryCommittee) throw new Error('Choose a committee for this event.')
+
+  if (secondaryCommittee && secondaryCommittee === primaryCommittee) {
+    throw new Error('Choose a different committee for the joint host.')
+  }
+
   const recurrence_group_id = input.isRecurring ? crypto.randomUUID() : null
 
   const rows = Array.from({ length: input.weekCount }, (_, i) => ({
     title: input.title,
     location: input.location,
-    event_type: input.eventType,
+    event_type: primaryCommittee,
+    secondary_event_type: secondaryCommittee,
     created_by_officer: input.createdByOfficer,
     calendar_start: new Date(input.calendarStart.getTime() + i * WEEK_MS).toISOString(),
     calendar_end: new Date(input.calendarEnd.getTime() + i * WEEK_MS).toISOString(),

@@ -24,6 +24,7 @@ export default function CreateEventForm({ officerName }: { officerName: string }
   const [title, setTitle] = useState('')
   const [location, setLocation] = useState('')
   const [eventType, setEventType] = useState('')
+  const [secondaryEventType, setSecondaryEventType] = useState('')
   const [createdByOfficer, setCreatedByOfficer] = useState(officerName)
   const [calendarStart, setCalendarStart] = useState('')
   const [calendarEnd, setCalendarEnd] = useState('')
@@ -49,6 +50,7 @@ export default function CreateEventForm({ officerName }: { officerName: string }
         title,
         location,
         eventType,
+        secondaryEventType,
         createdByOfficer,
         calendarStart: new Date(calendarStart),
         calendarEnd: new Date(calendarEnd),
@@ -131,7 +133,13 @@ export default function CreateEventForm({ officerName }: { officerName: string }
                 <select
                   id="eventType"
                   value={eventType}
-                  onChange={(e) => setEventType(e.target.value)}
+                  onChange={(e) => {
+                    setEventType(e.target.value)
+                    // Picking the co-host's committee here would leave the two
+                    // fields equal, so drop the co-host rather than submit a
+                    // pair the server will reject.
+                    if (e.target.value === secondaryEventType) setSecondaryEventType('')
+                  }}
                   required
                   className={INPUT}
                 >
@@ -139,6 +147,26 @@ export default function CreateEventForm({ officerName }: { officerName: string }
                     Select committee
                   </option>
                   {EVENT_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                {/* Joint events. Optional, never required, and blank by
+                    default — same option list as above, off the one constant. */}
+                <label className={LABEL} htmlFor="secondaryEventType">
+                  Second committee (optional)
+                </label>
+                <select
+                  id="secondaryEventType"
+                  value={secondaryEventType}
+                  onChange={(e) => setSecondaryEventType(e.target.value)}
+                  className={INPUT}
+                >
+                  <option value="">None</option>
+                  {EVENT_TYPES.filter((type) => type !== eventType).map((type) => (
                     <option key={type} value={type}>
                       {type}
                     </option>
