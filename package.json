@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:calendar": "node scripts/test-calendar.mjs"
+    "test:calendar": "node scripts/test-calendar.mjs",
+    "test:sync": "node scripts/test-member-sync.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
