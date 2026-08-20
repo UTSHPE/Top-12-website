@@ -327,3 +327,61 @@ export async function getAllEventsWithAttendance(): Promise<EventWithAttendance[
   const { recent } = await getDashboardStats(Number.MAX_SAFE_INTEGER)
   return recent
 }
+
+/** An event is editable only while it hasn't started yet. */
+export function isUpcoming(event: Pick<ChapterEvent, 'start'>, now: number = Date.now()): boolean {
+  return new Date(event.start).getTime() > now
+}
+
+export type EditableEvent = {
+  id: string
+  title: string
+  location: string
+  start: string
+  end: string
+  accessCode: string
+  committee: string
+  /** Live check-ins already recorded — the edit form warns before touching them. */
+  headcount: number
+}
+
+/**
+ * One event, plus its check-in count, for the edit screen.
+ *
+ * Returns null for an id that doesn't exist or has been soft-deleted, so the
+ * caller can 404 rather than render a form over nothing. Deliberately does NOT
+ * filter on the start time: whether the event is still editable is the caller's
+ * decision to make and report, and a past event needs to render a clear
+ * "too late" message rather than an unexplained not-found.
+ */
+export async function getEventForEdit(eventId: string): Promise<EditableEvent | null> {
+  const supabase = createAdminClient()
+
+  const [{ data: row }, { data: signIns }] = await Promise.all([
+    supabase
+      .from('events')
+      .select(
+        'id, title, location, event_type, secondary_event_type, access_code, calendar_start, calendar_end'
+      )
+      .eq('id', eventId)
+      .is('deleted_at', null)
+      .maybeSingle(),
+    supabase.from('sign_ins').select('id').eq('event_id', eventId).is('deleted_at', null),
+  ])
+
+  if (!row) return null
+
+  return {
+    id: row.id,
+    title: row.title,
+    location: row.location ?? '',
+    start: row.calendar_start,
+    end: row.calendar_end,
+    accessCode: row.access_code,
+    committee: committeeLabel({
+      eventType: row.event_type ?? 'Other',
+      secondaryEventType: row.secondary_event_type || null,
+    }),
+    headcount: signIns?.length ?? 0,
+  }
+}
