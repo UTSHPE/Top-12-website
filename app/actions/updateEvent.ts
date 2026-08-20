@@ -14,11 +14,17 @@ export type UpdateEventResult = {
 }
 
 /**
- * Change the date, time, and location of an event that hasn't happened yet.
+ * Change the timing and location of an event that hasn't happened yet.
  *
- * Only those three fields. Title, committee, points, and above all the access
- * code are immutable here: the code may already be printed on a flyer, and
- * silently reissuing it would strand everyone holding the old one.
+ * Two independent windows: the calendar window (when the event runs, mirrored
+ * to Google) and the check-in window (when a code actually works, internal
+ * only). Plus `is_open`, the officer's manual switch. All three matter —
+ * lib/checkin.ts gates a check-in on `withinWindow && is_open !== false`, so
+ * the timestamps are not vestigial and neither is the flag.
+ *
+ * Title, committee, points, and above all the access code stay immutable: the
+ * code may already be printed on a flyer, and silently reissuing it would
+ * strand everyone holding the old one.
  *
  * Order matters — Supabase first, Google second. The database is the source of
  * truth for check-in, so a Google outage must never block an officer from
@@ -29,6 +35,10 @@ export async function updateEvent(input: {
   /** ISO instants, already resolved from chapter-local wall time by the form. */
   calendarStart: string
   calendarEnd: string
+  checkInStart: string
+  checkInEnd: string
+  /** The manual switch. Saved with the rest so one Save means one state. */
+  isOpen: boolean
   location: string
 }): Promise<UpdateEventResult> {
   // Same belt-and-braces authorization as createEvent and deleteEvent: the
@@ -63,13 +73,30 @@ export async function updateEvent(input: {
 
   const start = new Date(input.calendarStart)
   const end = new Date(input.calendarEnd)
+  const checkInStart = new Date(input.checkInStart)
+  const checkInEnd = new Date(input.checkInEnd)
 
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-    throw new Error('Enter a valid start and end time.')
+    throw new Error('Enter a valid event start and end time.')
   }
   if (end.getTime() <= start.getTime()) {
     throw new Error('The event has to end after it starts.')
   }
+
+  // Both check-in columns are NOT NULL in the database. Rejecting a blank here
+  // turns what would otherwise surface as a raw Postgres 23502 into something
+  // an officer can act on.
+  if (Number.isNaN(checkInStart.getTime()) || Number.isNaN(checkInEnd.getTime())) {
+    throw new Error('Enter a valid check-in opening and closing time.')
+  }
+  if (checkInEnd.getTime() <= checkInStart.getTime()) {
+    throw new Error('Check-in has to close after it opens.')
+  }
+
+  // Deliberately NOT requiring the check-in window to sit inside the calendar
+  // window. Officers legitimately open check-in early or leave it open late,
+  // and a hard rule here would block a real workflow. A window that misses the
+  // event entirely is surfaced as a warning in the form instead.
 
   // An empty location is allowed — plenty of events are genuinely "TBD" — but
   // whitespace is not, since it reads as filled in and displays as blank.
@@ -83,6 +110,9 @@ export async function updateEvent(input: {
     .update({
       calendar_start: start.toISOString(),
       calendar_end: end.toISOString(),
+      check_in_start: checkInStart.toISOString(),
+      check_in_end: checkInEnd.toISOString(),
+      is_open: input.isOpen,
       location,
     })
     .eq('id', input.eventId)
@@ -90,6 +120,8 @@ export async function updateEvent(input: {
   if (updateError) throw new Error(updateError.message)
 
   // Only now, with the row already committed, mirror onto the chapter calendar.
+  // Only the calendar window and location go to Google — the check-in window
+  // and `is_open` are internal and have no counterpart on a calendar entry.
   //
   // Imported dynamically for the same reason deleteEvent does it: the calendar
   // module validates its env vars at module scope, and a static import would
@@ -131,6 +163,8 @@ export async function updateEvent(input: {
   revalidatePath('/admin/events')
   revalidatePath('/admin')
   revalidatePath('/events')
+  // The check-in screen reads the open event off this window.
+  revalidatePath('/checkin')
 
   return { calendarWarning }
 }
