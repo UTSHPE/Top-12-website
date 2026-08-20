@@ -3,7 +3,12 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { FaLock, FaRegClock, FaTriangleExclamation } from 'react-icons/fa6'
+import {
+  FaLock,
+  FaLocationDot,
+  FaRegClock,
+  FaTriangleExclamation,
+} from 'react-icons/fa6'
 import { updateEvent } from '@/app/actions/updateEvent'
 import { toLocalInputValue, fromLocalInputValue } from '@/lib/format'
 import type { EditableEvent } from '@/lib/events'
@@ -11,7 +16,11 @@ import ErrorStrip from '@/components/ErrorStrip'
 import { INPUT, LABEL, Panel, DateField } from '@/components/EventFormFields'
 
 /**
- * Edit the date, time, and location of an event that hasn't started.
+ * Edit the timing and location of an event that hasn't started.
+ *
+ * Both windows sit in one panel because their relationship is the thing that
+ * goes wrong: a check-in window that misses the event is the failure this
+ * screen exists to catch, and it's only visible when the two are side by side.
  *
  * Everything else is shown read-only rather than hidden, so an officer can
  * confirm they're editing the right event without being able to change the
@@ -22,6 +31,9 @@ export default function EditEventForm({ event }: { event: EditableEvent }) {
   // on the events table, whatever zone the officer's machine is set to.
   const [start, setStart] = useState(() => toLocalInputValue(event.start))
   const [end, setEnd] = useState(() => toLocalInputValue(event.end))
+  const [checkInStart, setCheckInStart] = useState(() => toLocalInputValue(event.checkInStart))
+  const [checkInEnd, setCheckInEnd] = useState(() => toLocalInputValue(event.checkInEnd))
+  const [isOpen, setIsOpen] = useState(event.checkInEnabled)
   const [location, setLocation] = useState(event.location)
 
   const [submitting, setSubmitting] = useState(false)
@@ -29,23 +41,40 @@ export default function EditEventForm({ event }: { event: EditableEvent }) {
   const [warning, setWarning] = useState('')
   const router = useRouter()
 
+  const startAt = fromLocalInputValue(start)
+  const endAt = fromLocalInputValue(end)
+  const checkInStartAt = fromLocalInputValue(checkInStart)
+  const checkInEndAt = fromLocalInputValue(checkInEnd)
+
+  // Non-blocking. A check-in window that doesn't reach the event is legal —
+  // officers open early and close late on purpose — but one that misses it
+  // entirely means members standing at the door with a code that won't work.
+  const drift = describeDrift(startAt, endAt, checkInStartAt, checkInEndAt)
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSubmitting(true)
     setErrorMsg('')
 
-    const startAt = fromLocalInputValue(start)
-    const endAt = fromLocalInputValue(end)
-
     if (!startAt || !endAt) {
-      setErrorMsg('Enter a valid start and end time.')
+      setErrorMsg('Enter a valid event start and end time.')
       setSubmitting(false)
       return
     }
-    // Mirrors the server's rule so the officer hears about it immediately. The
-    // server re-checks regardless — this is convenience, not enforcement.
+    if (!checkInStartAt || !checkInEndAt) {
+      setErrorMsg('Enter a valid check-in opening and closing time.')
+      setSubmitting(false)
+      return
+    }
+    // Mirrors the server's rules so the officer hears about them immediately.
+    // The server re-checks regardless — this is convenience, not enforcement.
     if (endAt.getTime() <= startAt.getTime()) {
       setErrorMsg('The event has to end after it starts.')
+      setSubmitting(false)
+      return
+    }
+    if (checkInEndAt.getTime() <= checkInStartAt.getTime()) {
+      setErrorMsg('Check-in has to close after it opens.')
       setSubmitting(false)
       return
     }
@@ -55,6 +84,9 @@ export default function EditEventForm({ event }: { event: EditableEvent }) {
         eventId: event.id,
         calendarStart: startAt.toISOString(),
         calendarEnd: endAt.toISOString(),
+        checkInStart: checkInStartAt.toISOString(),
+        checkInEnd: checkInEndAt.toISOString(),
+        isOpen,
         location,
       })
 
@@ -115,7 +147,7 @@ export default function EditEventForm({ event }: { event: EditableEvent }) {
             {event.title}
           </h1>
           <p className="text-sm text-faint">
-            Only the date, time, and location can be changed.
+            Only the timing and location can be changed.
           </p>
         </div>
 
@@ -161,19 +193,106 @@ export default function EditEventForm({ event }: { event: EditableEvent }) {
           )}
 
           <Panel eyebrow="Timing" color="var(--color-secondary)" Icon={FaRegClock}>
-            <div className="grid gap-3.5 sm:grid-cols-2">
-              <DateField
-                id="calendarStart"
-                label="Event start"
-                value={start}
-                onChange={setStart}
-              />
-              <DateField id="calendarEnd" label="Event end" value={end} onChange={setEnd} />
-            </div>
-            <p className="text-xs text-faint">
+            <p className="-mt-1 text-xs text-faint">
               Central time (America/Chicago) — the same zone the events table shows.
             </p>
 
+            <fieldset>
+              <legend className="mb-2 text-[11px] font-bold tracking-[.05em] text-faint uppercase">
+                When the event runs
+              </legend>
+              <div className="grid gap-3.5 sm:grid-cols-2">
+                <DateField
+                  id="calendarStart"
+                  label="Event start"
+                  value={start}
+                  onChange={setStart}
+                />
+                <DateField id="calendarEnd" label="Event end" value={end} onChange={setEnd} />
+              </div>
+              <p className="mt-1.5 text-xs text-faint">
+                What members see, and what gets mirrored to the Google Calendar.
+              </p>
+            </fieldset>
+
+            <fieldset className="border-t border-dashed border-line pt-4">
+              <legend className="mb-2 text-[11px] font-bold tracking-[.05em] text-faint uppercase">
+                When the code works
+              </legend>
+              <div className="grid gap-3.5 sm:grid-cols-2">
+                <DateField
+                  id="checkInStart"
+                  label="Check-in opens"
+                  value={checkInStart}
+                  onChange={setCheckInStart}
+                />
+                <DateField
+                  id="checkInEnd"
+                  label="Check-in closes"
+                  value={checkInEnd}
+                  onChange={setCheckInEnd}
+                />
+              </div>
+              <p className="mt-1.5 text-xs text-faint">
+                Separate from the event times on purpose — opening early or closing late
+                is fine. Never sent to the Google Calendar.
+              </p>
+            </fieldset>
+
+            {/* is_open is ANDed with the window above by lib/checkin.ts, so an
+                event can sit inside its window and still refuse every code.
+                That state was invisible from this screen until now. */}
+            <div className="flex items-start gap-3 rounded-md border-[1.5px] border-line bg-surface px-[15px] py-[13px]">
+              <button
+                type="button"
+                onClick={() => setIsOpen(!isOpen)}
+                role="switch"
+                aria-checked={isOpen}
+                aria-label="Check-in enabled"
+                className="mt-0.5 flex-none"
+              >
+                <span
+                  aria-hidden
+                  className={`relative block h-[22px] w-10 rounded-full transition-colors ${
+                    isOpen ? 'bg-success' : 'bg-line'
+                  }`}
+                >
+                  <span
+                    className={`absolute top-[3px] size-4 rounded-full bg-white transition-all ${
+                      isOpen ? 'left-[21px]' : 'left-[3px]'
+                    }`}
+                  />
+                </span>
+              </button>
+              <div className="min-w-0">
+                <p className="text-[15px] font-semibold">
+                  {isOpen ? 'Check-in enabled' : 'Check-in disabled'}
+                </p>
+                <p className="mt-0.5 text-xs text-faint">
+                  {isOpen
+                    ? 'Codes work inside the window above.'
+                    : 'No code will be accepted, even inside the window above.'}
+                </p>
+              </div>
+            </div>
+
+            {drift && (
+              <div
+                role="status"
+                className="flex items-start gap-2.5 rounded-md bg-warning/12 px-4 py-3"
+              >
+                <FaTriangleExclamation
+                  aria-hidden
+                  className="mt-0.5 size-3.5 flex-none text-warning"
+                />
+                <p className="text-[13px] leading-snug text-body">
+                  <b>{drift}</b> You can still save this — check it&apos;s what you meant.
+                </p>
+              </div>
+            )}
+          </Panel>
+
+          <Panel eyebrow="Location" color="var(--color-primary)" Icon={FaLocationDot}>
             <div>
               <label className={LABEL} htmlFor="location">
                 Location
@@ -185,6 +304,9 @@ export default function EditEventForm({ event }: { event: EditableEvent }) {
                 placeholder="ECJ 1.202"
                 className={INPUT}
               />
+              <p className="mt-1.5 text-xs text-faint">
+                Can be left empty. Also updated on the Google Calendar entry.
+              </p>
             </div>
           </Panel>
 
@@ -209,4 +331,29 @@ export default function EditEventForm({ event }: { event: EditableEvent }) {
       </div>
     </div>
   )
+}
+
+/**
+ * The one mismatch worth interrupting for: a check-in window that doesn't
+ * reach the event at all.
+ *
+ * Only the disjoint cases. Partial overlap is normal and deliberately silent —
+ * warning on "check-in closes before the event ends" would fire on every event
+ * that stops taking attendance halfway through, which is most of them.
+ */
+function describeDrift(
+  start: Date | null,
+  end: Date | null,
+  checkInStart: Date | null,
+  checkInEnd: Date | null
+): string | null {
+  if (!start || !end || !checkInStart || !checkInEnd) return null
+
+  if (checkInEnd.getTime() < start.getTime()) {
+    return 'Check-in closes before the event starts.'
+  }
+  if (checkInStart.getTime() > end.getTime()) {
+    return 'Check-in opens after the event has already ended.'
+  }
+  return null
 }

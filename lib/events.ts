@@ -339,6 +339,14 @@ export type EditableEvent = {
   location: string
   start: string
   end: string
+  /**
+   * The window in which a code actually works. Separate from the calendar
+   * window on purpose, and NOT NULL in the database — see updateEvent.
+   */
+  checkInStart: string
+  checkInEnd: string
+  /** The officer's manual switch. ANDed with the window by lib/checkin.ts. */
+  checkInEnabled: boolean
   accessCode: string
   committee: string
   /** Live check-ins already recorded — the edit form warns before touching them. */
@@ -361,7 +369,7 @@ export async function getEventForEdit(eventId: string): Promise<EditableEvent | 
     supabase
       .from('events')
       .select(
-        'id, title, location, event_type, secondary_event_type, access_code, calendar_start, calendar_end'
+        'id, title, location, event_type, secondary_event_type, access_code, calendar_start, calendar_end, check_in_start, check_in_end, is_open'
       )
       .eq('id', eventId)
       .is('deleted_at', null)
@@ -377,6 +385,9 @@ export async function getEventForEdit(eventId: string): Promise<EditableEvent | 
     location: row.location ?? '',
     start: row.calendar_start,
     end: row.calendar_end,
+    checkInStart: row.check_in_start,
+    checkInEnd: row.check_in_end,
+    checkInEnabled: row.is_open !== false,
     accessCode: row.access_code,
     committee: committeeLabel({
       eventType: row.event_type ?? 'Other',
