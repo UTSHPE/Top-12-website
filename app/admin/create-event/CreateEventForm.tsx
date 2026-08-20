@@ -15,10 +15,7 @@ import { EVENT_TYPES } from '@/lib/events'
 import CodeDisplay from '@/components/CodeDisplay'
 import PresentCodeButton from '@/components/PresentCodeButton'
 import ErrorStrip from '@/components/ErrorStrip'
-
-const INPUT =
-  'w-full rounded-[10px] border-[1.5px] border-line bg-surface px-[13px] py-[11px] text-[15px] font-semibold outline-none transition-colors focus:border-primary-bright'
-const LABEL = 'mb-1.5 block text-[13px] font-semibold text-muted'
+import { INPUT, LABEL, Panel, DateField } from '@/components/EventFormFields'
 
 export default function CreateEventForm({ officerName }: { officerName: string }) {
   const [title, setTitle] = useState('')
@@ -323,59 +320,6 @@ export default function CreateEventForm({ officerName }: { officerName: string }
           </div>
         </form>
       </div>
-    </div>
-  )
-}
-
-function Panel({
-  eyebrow,
-  color,
-  Icon,
-  children,
-}: {
-  eyebrow: string
-  color: string
-  Icon: React.ComponentType<{ className?: string }>
-  children: React.ReactNode
-}) {
-  return (
-    <section className="rounded-[14px] bg-surface-2 p-5">
-      <h2
-        className="font-display mb-4 flex items-center gap-1.5 text-[13px] font-bold tracking-[.06em] uppercase"
-        style={{ color }}
-      >
-        <Icon className="size-3.5" />
-        {eyebrow}
-      </h2>
-      <div className="flex flex-col gap-3.5">{children}</div>
-    </section>
-  )
-}
-
-function DateField({
-  id,
-  label,
-  value,
-  onChange,
-}: {
-  id: string
-  label: string
-  value: string
-  onChange: (next: string) => void
-}) {
-  return (
-    <div>
-      <label className={LABEL} htmlFor={id}>
-        {label}
-      </label>
-      <input
-        id={id}
-        type="datetime-local"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        required
-        className={`${INPUT} text-sm`}
-      />
     </div>
   )
 }

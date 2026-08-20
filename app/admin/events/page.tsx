@@ -1,4 +1,6 @@
-import { committeeLabel, getAllEventsWithAttendance } from '@/lib/events'
+import Link from 'next/link'
+import { FaPen } from 'react-icons/fa6'
+import { committeeLabel, getAllEventsWithAttendance, isUpcoming } from '@/lib/events'
 import { formatDateLong, formatPoints } from '@/lib/format'
 import AdminTopbar, { NewEventButton } from '@/app/admin/AdminTopbar'
 import { LiveDot } from '@/components/StatusPill'
@@ -7,7 +9,7 @@ import CheckInToggle from './CheckInToggle'
 
 export const revalidate = 0
 
-const COLS = 'grid-cols-[2fr_1.1fr_1.2fr_.9fr_1fr_.7fr_1fr_130px_90px]'
+const COLS = 'grid-cols-[2fr_1.1fr_1.2fr_.9fr_1fr_.7fr_1fr_130px_120px]'
 
 export default async function OfficerAnalyticsPage() {
   const events = await getAllEventsWithAttendance()
@@ -87,7 +89,17 @@ export default async function OfficerAnalyticsPage() {
                         live={event.isOpen}
                       />
                     </span>
-                    <span className="flex justify-end">
+                    <span className="flex justify-end gap-1">
+                      {isUpcoming(event) && (
+                        <Link
+                          href={`/admin/events/${event.id}/edit`}
+                          aria-label={`Edit ${event.title}`}
+                          title={`Edit ${event.title}`}
+                          className="flex size-8 items-center justify-center rounded-sm text-[#A99E8F] transition-colors hover:bg-primary/10 hover:text-primary"
+                        >
+                          <FaPen aria-hidden className="size-3.5" />
+                        </Link>
+                      )}
                       <DeleteEventButton
                         eventId={event.id}
                         title={event.title}

@@ -86,3 +86,54 @@ export async function deleteCalendarEvent(eventId: string): Promise<void> {
     throw err
   }
 }
+
+/**
+ * Move an existing calendar entry and/or change its location.
+ *
+ * `patch`, never `update`: update replaces the whole resource, so any field
+ * omitted from the body — description, summary, attendees, the recurrence rule —
+ * would be wiped. Patch merges, which is the only correct verb for an edit that
+ * knows about three fields and nothing else.
+ *
+ * Returns 'missing' rather than throwing when the entry is gone. The caller has
+ * to report that as a warning but must not treat it as a failed edit — the
+ * database row is already updated by the time this runs. Anything else throws
+ * and the caller decides.
+ *
+ * 'Gone' covers three cases, and the third is the one that bites. A deleted
+ * entry is not 404 here: events.delete only marks it `status: 'cancelled'`, and
+ * Google happily accepts a patch against it, returning 200 with the new times
+ * applied to an entry that no listing will ever show. Verified against the live
+ * calendar. Trusting the 200 would report success for an edit nobody can see,
+ * so the response status is checked rather than just the HTTP code.
+ */
+export async function patchCalendarEvent(
+  eventId: string,
+  input: {
+    /** RFC3339 timestamps, as stored on the event row. */
+    calendarStart: string
+    calendarEnd: string
+    location: string | null
+  }
+): Promise<'patched' | 'missing'> {
+  try {
+    const res = await calendar.events.patch({
+      calendarId: CALENDAR_ID,
+      eventId,
+      requestBody: {
+        start: { dateTime: input.calendarStart, timeZone: CALENDAR_TIME_ZONE },
+        end: { dateTime: input.calendarEnd, timeZone: CALENDAR_TIME_ZONE },
+        // Send '' rather than undefined to clear a location an officer emptied.
+        // undefined would leave the old value in place, since patch merges.
+        location: input.location ?? '',
+      },
+    })
+    return res.data.status === 'cancelled' ? 'missing' : 'patched'
+  } catch (err) {
+    const status =
+      (err as { code?: number })?.code ??
+      (err as { response?: { status?: number } })?.response?.status
+    if (status === 404 || status === 410) return 'missing'
+    throw err
+  }
+}
