@@ -48,3 +48,7 @@ gcp-*.json
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Design handoff bundle — 1.4MB of mockups, kept locally as reference.
+# The design is already implemented; see the Design system section in CLAUDE.md.
+*.zip
