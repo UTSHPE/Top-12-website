@@ -28,9 +28,19 @@ export default function MemberNav() {
 
   return (
     <header className="flex h-[62px] flex-none items-center justify-between border-b border-hairline bg-surface px-5 sm:px-[30px]">
+      {/* Two sizes, and the display utility has to sit on a wrapper rather than
+          on Logo itself. Logo hard-codes `inline-flex` on its own root, and
+          Tailwind emits `.hidden` *before* `.inline-flex` in the utilities
+          layer — same specificity, so the component's class won and the phone
+          rendered both lockups side by side. On separate elements there is no
+          conflict to lose. */}
       <Link href="/" aria-label="UT SHPE home" className="flex-none">
-        <Logo height={24} className="sm:hidden" />
-        <Logo height={30} className="hidden sm:inline-flex" />
+        <span className="sm:hidden">
+          <Logo height={24} />
+        </span>
+        <span className="hidden sm:block">
+          <Logo height={30} />
+        </span>
       </Link>
 
       <nav className="flex items-center gap-3 text-[13px] font-medium text-body sm:gap-[26px] sm:text-sm">

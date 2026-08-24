@@ -86,21 +86,45 @@ export async function createEvent(input: {
   // Mirror onto the chapter Google Calendar. The rows are already committed, so
   // a Calendar failure is reported back as a partial success rather than thrown —
   // but it must never be silent, which is what hid this bug for an afternoon.
+  //
+  // ALL AT ONCE, NOT IN A LOOP. This used to await each insert in sequence, and
+  // that is why an eleven-week series reached the calendar as nothing at all:
+  // one insert takes ~800ms, so a series spent 9-13s inside the request and the
+  // serverless function was killed before — or partway through — the calendar
+  // step, leaving every row with a null google_event_id. Measured against the
+  // live calendar: 11 sequential inserts took 8.9s, while 16 in parallel took
+  // 1.3s. Sixteen is the largest series the form can produce, so the whole step
+  // now fits comfortably inside any function budget.
   const calendarWarnings: string[] = []
-  for (const row of rows) {
-    let googleEventId: string | null | undefined
-    try {
-      googleEventId = await insertCalendarEvent({
+
+  const inserts = await Promise.allSettled(
+    rows.map((row) =>
+      insertCalendarEvent({
         title: row.title,
         location: row.location,
         calendarStart: row.calendar_start,
         calendarEnd: row.calendar_end,
       })
-    } catch (err) {
+    )
+  )
+
+  // access_code is what ties a local row to the row that came back: it is
+  // unique per event and generated here, so it survives the insert regardless
+  // of what order PostgREST returns the rows in.
+  const idByCode = new Map((insertedRows ?? []).map((r) => [r.access_code, r.id]))
+  // Carries the title so a failed link write can name the event: `links` is a
+  // filtered subset of `rows`, so its indices do not line up with theirs.
+  const links: { id: string; googleEventId: string; title: string }[] = []
+
+  inserts.forEach((result, i) => {
+    const row = rows[i]
+
+    if (result.status === 'rejected') {
       // Log the full Google response body — the actionable reason (calendar not
       // shared, API not enabled) lives there, not in err.message. Deliberately
       // NOT dumping the whole error object: gaxios attaches `err.config`, which
       // carries the Authorization header.
+      const err = result.reason
       const body = (err as { response?: { data?: unknown } })?.response?.data
       console.error(
         '[gcal] insert failed:',
@@ -109,36 +133,67 @@ export async function createEvent(input: {
         body ? JSON.stringify(body, null, 2) : calendarErrorMessage(err)
       )
       calendarWarnings.push(calendarErrorMessage(err))
+      return
     }
 
-    // Record which calendar entry this row created, so deleting the event can
-    // remove it too. Deliberately outside the try above: this is a database
-    // write, and a failure here is not a Calendar failure.
-    //
-    // Never fatal. The rows and the calendar entries both already exist — an
-    // untracked calendar entry is a far better outcome than failing creation
-    // after the fact. It just has to be deleted by hand later.
-    if (googleEventId) {
-      const insertedId = insertedRows?.find((r) => r.access_code === row.access_code)?.id
-      if (insertedId) {
-        const { error: linkError } = await supabase
-          .from('events')
-          .update({ google_event_id: googleEventId })
-          .eq('id', insertedId)
+    const googleEventId = result.value
+    if (!googleEventId) return
 
-        if (linkError) {
-          console.error(
-            '[gcal] created the calendar entry but could not store its id:',
-            row.title,
-            linkError.message
-          )
-        }
-      }
+    const insertedId = idByCode.get(row.access_code)
+    if (!insertedId) {
+      // The entry exists on the calendar but nothing points at it, so deleting
+      // the event will not remove it. Say so rather than dropping it silently —
+      // the old code just skipped this case.
+      console.error(
+        '[gcal] created the calendar entry but could not match it to a row:',
+        row.title,
+        row.access_code
+      )
+      calendarWarnings.push(
+        `A calendar entry for "${row.title}" could not be linked to its event, so deleting the event will not remove it from Google Calendar.`
+      )
+      return
     }
-  }
+
+    links.push({ id: insertedId, googleEventId, title: row.title })
+  })
+
+  // Record which calendar entry each row created, so deleting the event can
+  // remove it too. Deliberately outside the error handling above: this is a
+  // database write, and a failure here is not a Calendar failure.
+  //
+  // Never fatal. The rows and the calendar entries both already exist — an
+  // untracked calendar entry is a far better outcome than failing creation
+  // after the fact. It just has to be deleted by hand later.
+  //
+  // Parallel for the same reason as the inserts: a sequential round trip per
+  // row put the series back over the time budget it just escaped.
+  const linkWrites = await Promise.allSettled(
+    links.map(async ({ id, googleEventId }) => {
+      const { error: linkError } = await supabase
+        .from('events')
+        .update({ google_event_id: googleEventId })
+        .eq('id', id)
+      if (linkError) throw new Error(linkError.message)
+    })
+  )
+
+  linkWrites.forEach((result, i) => {
+    if (result.status === 'rejected') {
+      console.error(
+        '[gcal] created the calendar entry but could not store its id:',
+        links[i].title,
+        result.reason instanceof Error ? result.reason.message : result.reason
+      )
+    }
+  })
+
+  // One warning per distinct reason. A failing series would otherwise repeat
+  // the same sentence sixteen times on the success card.
+  const uniqueWarnings = [...new Set(calendarWarnings)]
 
   // Hand the codes back so the officer can put the first one on a slide right
   // away — that hand-off is the whole point of the create flow. The warnings
   // ride along so a partial success is never presented as a clean one.
-  return { codes: rows.map((row) => row.access_code), calendarWarnings }
+  return { codes: rows.map((row) => row.access_code), calendarWarnings: uniqueWarnings }
 }
