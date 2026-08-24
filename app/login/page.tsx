@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { FaArrowRight } from 'react-icons/fa6'
 import { supabase } from '@/lib/supabase/client'
 import ErrorStrip from '@/components/ErrorStrip'
@@ -11,10 +11,21 @@ const INPUT =
   'w-full rounded-[10px] border-[1.5px] border-line bg-surface px-[13px] py-[11px] text-[15px] font-semibold outline-none transition-colors focus:border-primary-bright'
 const LABEL = 'mb-1.5 block text-[13px] font-semibold text-muted'
 
+/**
+ * `next` arrives in the query string, so it is attacker-controlled. Only a
+ * same-origin absolute path is allowed through: `//evil.com` and
+ * `https://evil.com` are both accepted by location.assign(), and either would
+ * hand an officer off to another site at the exact moment their session became
+ * valid.
+ */
+function safeNext(value: string | null): string {
+  if (!value || !value.startsWith('/') || value.startsWith('//')) return '/admin'
+  return value
+}
+
 function LoginForm() {
-  const router = useRouter()
   const searchParams = useSearchParams()
-  const next = searchParams.get('next') ?? '/admin'
+  const next = safeNext(searchParams.get('next'))
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -31,9 +42,29 @@ function LoginForm() {
       return
     }
 
-    // Refresh so Server Components (and the proxy) see the new session cookie.
-    router.push(next)
-    router.refresh()
+    // A full document navigation, deliberately — not router.push().
+    //
+    // The old push()/refresh() pair made the first sign-in appear to do
+    // nothing, and a second attempt always worked. Two things caused that, and
+    // a hard navigation is what fixes both:
+    //
+    //  1. MemberNav links to /admin, so Next prefetches it while the visitor is
+    //     still signed out. The proxy answers that prefetch with the redirect
+    //     to /login, and the Router Cache keeps it. router.push('/admin') then
+    //     replays the cached redirect instead of asking the server again — the
+    //     officer lands back on the login form with a valid session.
+    //  2. refresh() fired immediately after push() races the navigation push()
+    //     started, so even an uncached route was not reliably reached.
+    //
+    // assign() bypasses the Router Cache entirely and sends a fresh request
+    // carrying the session cookie, so the proxy sees the signed-in officer.
+    // getSession() first forces the client to finish persisting that cookie
+    // before the browser leaves the page.
+    await supabase.auth.getSession()
+    window.location.assign(next)
+
+    // No setStatus() after this point: the button stays disabled through the
+    // navigation, so the form cannot be submitted twice while it unloads.
   }
 
   return (
