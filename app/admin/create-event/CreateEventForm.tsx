@@ -15,13 +15,14 @@ import { EVENT_TYPES } from '@/lib/events'
 import CodeDisplay from '@/components/CodeDisplay'
 import PresentCodeButton from '@/components/PresentCodeButton'
 import ErrorStrip from '@/components/ErrorStrip'
-import { INPUT, LABEL, Panel, DateField } from '@/components/EventFormFields'
+import { INPUT, LABEL, Panel, DateField, CheckboxField } from '@/components/EventFormFields'
 
 export default function CreateEventForm({ officerName }: { officerName: string }) {
   const [title, setTitle] = useState('')
   const [location, setLocation] = useState('')
   const [eventType, setEventType] = useState('')
   const [secondaryEventType, setSecondaryEventType] = useState('')
+  const [isRtc, setIsRtc] = useState(false)
   const [createdByOfficer, setCreatedByOfficer] = useState(officerName)
   const [calendarStart, setCalendarStart] = useState('')
   const [calendarEnd, setCalendarEnd] = useState('')
@@ -57,6 +58,7 @@ export default function CreateEventForm({ officerName }: { officerName: string }
         multiplier,
         isRecurring,
         weekCount: isRecurring ? weekCount : 1,
+        isRtc,
       })
       setCalendarWarnings(calendarWarnings)
       setCodes(codes)
@@ -171,6 +173,21 @@ export default function CreateEventForm({ officerName }: { officerName: string }
                 </select>
               </div>
             </div>
+
+            {/* Sits with the committees rather than down in Points, because
+                it is a property of what the event IS, not of what it pays.
+                RTC attendance is counted separately and never touches points. */}
+            <CheckboxField
+              id="isRtc"
+              label="Counts toward RTC"
+              hint={
+                isRecurring
+                  ? `Applies to all ${weekCount} events in this series.`
+                  : 'Attendance is counted toward Road to Convention. Points are unaffected.'
+              }
+              checked={isRtc}
+              onChange={setIsRtc}
+            />
 
             <div>
               <label className={LABEL} htmlFor="host">

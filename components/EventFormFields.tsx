@@ -1,5 +1,7 @@
 'use client'
 
+import { FaCheck } from 'react-icons/fa6'
+
 /**
  * The event form's shared field primitives.
  *
@@ -34,6 +36,57 @@ export function Panel({
       </h2>
       <div className="flex flex-col gap-3.5">{children}</div>
     </section>
+  )
+}
+
+/**
+ * A labelled checkbox in the form's own treatment.
+ *
+ * The real `<input>` is `sr-only` rather than hidden so it keeps its keyboard
+ * behaviour and its association with the label; the square beside it is the
+ * visible control. Same construction as the create form's "Repeat weekly" box,
+ * which is where this styling came from.
+ */
+export function CheckboxField({
+  id,
+  label,
+  hint,
+  checked,
+  onChange,
+}: {
+  id: string
+  label: string
+  hint?: string
+  checked: boolean
+  onChange: (next: boolean) => void
+}) {
+  return (
+    <label
+      htmlFor={id}
+      className="flex cursor-pointer items-start gap-[11px] rounded-md border-[1.5px] border-line bg-surface px-[15px] py-[13px]"
+    >
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="sr-only"
+      />
+      <span
+        aria-hidden
+        className={`mt-px flex size-[22px] flex-none items-center justify-center rounded-[6px] border-[1.5px] transition-colors ${
+          checked
+            ? 'border-primary-bright bg-primary-bright text-white'
+            : 'border-line bg-surface'
+        }`}
+      >
+        {checked && <FaCheck className="size-3" />}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-[15px] font-semibold">{label}</span>
+        {hint && <span className="mt-0.5 block text-xs text-faint">{hint}</span>}
+      </span>
+    </label>
   )
 }
 

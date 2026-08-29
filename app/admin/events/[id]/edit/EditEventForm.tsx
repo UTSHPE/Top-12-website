@@ -7,13 +7,14 @@ import {
   FaLock,
   FaLocationDot,
   FaRegClock,
+  FaRoad,
   FaTriangleExclamation,
 } from 'react-icons/fa6'
 import { updateEvent } from '@/app/actions/updateEvent'
 import { toLocalInputValue, fromLocalInputValue } from '@/lib/format'
 import type { EditableEvent } from '@/lib/events'
 import ErrorStrip from '@/components/ErrorStrip'
-import { INPUT, LABEL, Panel, DateField } from '@/components/EventFormFields'
+import { INPUT, LABEL, Panel, DateField, CheckboxField } from '@/components/EventFormFields'
 
 /**
  * Edit the timing and location of an event that hasn't started.
@@ -34,6 +35,7 @@ export default function EditEventForm({ event }: { event: EditableEvent }) {
   const [checkInStart, setCheckInStart] = useState(() => toLocalInputValue(event.checkInStart))
   const [checkInEnd, setCheckInEnd] = useState(() => toLocalInputValue(event.checkInEnd))
   const [isOpen, setIsOpen] = useState(event.checkInEnabled)
+  const [isRtc, setIsRtc] = useState(event.isRtc)
   const [location, setLocation] = useState(event.location)
 
   const [submitting, setSubmitting] = useState(false)
@@ -87,6 +89,7 @@ export default function EditEventForm({ event }: { event: EditableEvent }) {
         checkInStart: checkInStartAt.toISOString(),
         checkInEnd: checkInEndAt.toISOString(),
         isOpen,
+        isRtc,
         location,
       })
 
@@ -147,7 +150,7 @@ export default function EditEventForm({ event }: { event: EditableEvent }) {
             {event.title}
           </h1>
           <p className="text-sm text-faint">
-            Only the timing and location can be changed.
+            Only the timing, location, and RTC status can be changed.
           </p>
         </div>
 
@@ -172,6 +175,20 @@ export default function EditEventForm({ event }: { event: EditableEvent }) {
               </b>
             </span>
           </div>
+
+          {/* Next to the committee above, because it is the same kind of
+              fact about the event. Unlike everything else on this form it can
+              also be corrected after the event has happened — that control is
+              the RTC switch on the events table, which has no upcoming gate. */}
+          <Panel eyebrow="Road to convention" color="var(--color-secondary)" Icon={FaRoad}>
+            <CheckboxField
+              id="isRtc"
+              label="Counts toward RTC"
+              hint="Attendance is counted toward Road to Convention. Points and the leaderboard are unaffected."
+              checked={isRtc}
+              onChange={setIsRtc}
+            />
+          </Panel>
 
           {event.headcount > 0 && (
             <div

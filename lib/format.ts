@@ -76,16 +76,60 @@ export const formatPoints = (points: number) =>
 export const formatPointsLabel = (points: number) =>
   `${formatPoints(points)} ${points === 1 ? 'point' : 'points'}`
 
+export type Term = {
+  /** "Fall 2025" — the same string `currentSeason` has always returned. */
+  label: string
+  /** First instant of the term, chapter-local midnight. */
+  startsAt: Date
+  /** First instant AFTER the term — the range is half-open, [startsAt, endsAt). */
+  endsAt: Date
+}
+
+/**
+ * The semester containing an instant, as a date range.
+ *
+ * Spring runs Jan–May, Summer Jun–Jul, Fall Aug–Dec, which is how the chapter
+ * counts its semesters — the same rule `currentSeason` has always used for its
+ * label, now shared so the label and the boundaries cannot drift apart.
+ *
+ * Boundaries are chapter-local midnights, not UTC ones. An event at 7pm on
+ * December 31st belongs to the fall term, and it takes the zone-aware
+ * conversion below to say so — `new Date('2026-01-01')` would parse as UTC and
+ * pull the last six hours of December into spring.
+ *
+ * Half-open on purpose: an "end of term" that is itself inside the term forces
+ * every caller to decide between `<=` and `<` on a timestamp, and one of them
+ * will get it wrong for an event starting exactly at midnight.
+ */
+export function termBounds(now: Date = new Date()): Term {
+  const parts = fmt({ year: 'numeric', month: 'numeric' }).formatToParts(now)
+  const year = Number(parts.find((p) => p.type === 'year')!.value)
+  const month = Number(parts.find((p) => p.type === 'month')!.value)
+
+  const [term, startMonth, endMonth, endYear] =
+    month <= 5
+      ? (['Spring', 1, 6, year] as const)
+      : month <= 7
+        ? (['Summer', 6, 8, year] as const)
+        : // Fall ends when January does — the term rolls over into next year.
+          (['Fall', 8, 1, year + 1] as const)
+
+  const midnight = (y: number, m: number) =>
+    fromLocalInputValue(`${y}-${String(m).padStart(2, '0')}-01T00:00`)!
+
+  return {
+    label: `${term} ${year}`,
+    startsAt: midnight(year, startMonth),
+    endsAt: midnight(endYear, endMonth),
+  }
+}
+
 /**
  * "Fall 2025" — the leaderboard season label. Spring runs Jan–May, Summer
  * Jun–Jul, Fall Aug–Dec, which is how the chapter counts its semesters.
  */
 export function currentSeason(now: Date = new Date()): string {
-  const parts = fmt({ year: 'numeric', month: 'numeric' }).formatToParts(now)
-  const year = parts.find((p) => p.type === 'year')!.value
-  const month = Number(parts.find((p) => p.type === 'month')!.value)
-  const term = month <= 5 ? 'Spring' : month <= 7 ? 'Summer' : 'Fall'
-  return `${term} ${year}`
+  return termBounds(now).label
 }
 
 /** Greeting for the officer topbar, based on chapter-local time of day. */

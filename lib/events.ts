@@ -25,6 +25,11 @@ export type ChapterEvent = {
    * members experience; this is the toggle state the admin UI renders.
    */
   checkInEnabled: boolean
+  /**
+   * Does attending this count toward a member's RTC total? Tracked entirely
+   * separately from points — see docs/migrations/007. Never feeds `points`.
+   */
+  isRtc: boolean
 }
 
 /**
@@ -183,10 +188,11 @@ type EventRow = {
   base_points: number
   multiplier: number
   is_open: boolean
+  is_rtc: boolean
 }
 
 const EVENT_COLUMNS =
-  'id, title, location, event_type, secondary_event_type, created_by_officer, access_code, calendar_start, calendar_end, check_in_start, check_in_end, base_points, multiplier, is_open'
+  'id, title, location, event_type, secondary_event_type, created_by_officer, access_code, calendar_start, calendar_end, check_in_start, check_in_end, base_points, multiplier, is_open, is_rtc'
 
 function toChapterEvent(row: EventRow, now: number): ChapterEvent {
   return {
@@ -213,6 +219,11 @@ function toChapterEvent(row: EventRow, now: number): ChapterEvent {
       now >= new Date(row.check_in_start).getTime() &&
       now <= new Date(row.check_in_end).getTime(),
     checkInEnabled: row.is_open !== false,
+    // Coalesced rather than read straight through: the column is NOT NULL, but
+    // a row selected before migration 007 was applied would arrive undefined,
+    // and `undefined` would render as an unchecked box that silently clears the
+    // flag on the next save.
+    isRtc: row.is_rtc === true,
   }
 }
 
@@ -347,6 +358,8 @@ export type EditableEvent = {
   checkInEnd: string
   /** The officer's manual switch. ANDed with the window by lib/checkin.ts. */
   checkInEnabled: boolean
+  /** Counts toward RTC. Editable here AND from the events table — see below. */
+  isRtc: boolean
   accessCode: string
   committee: string
   /** Live check-ins already recorded — the edit form warns before touching them. */
@@ -369,7 +382,7 @@ export async function getEventForEdit(eventId: string): Promise<EditableEvent | 
     supabase
       .from('events')
       .select(
-        'id, title, location, event_type, secondary_event_type, access_code, calendar_start, calendar_end, check_in_start, check_in_end, is_open'
+        'id, title, location, event_type, secondary_event_type, access_code, calendar_start, calendar_end, check_in_start, check_in_end, is_open, is_rtc'
       )
       .eq('id', eventId)
       .is('deleted_at', null)
@@ -388,6 +401,7 @@ export async function getEventForEdit(eventId: string): Promise<EditableEvent | 
     checkInStart: row.check_in_start,
     checkInEnd: row.check_in_end,
     checkInEnabled: row.is_open !== false,
+    isRtc: row.is_rtc === true,
     accessCode: row.access_code,
     committee: committeeLabel({
       eventType: row.event_type ?? 'Other',

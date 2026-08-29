@@ -23,6 +23,11 @@ export async function createEvent(input: {
   multiplier: number
   isRecurring: boolean
   weekCount: number
+  /**
+   * Counts toward RTC. Applies to every occurrence of a recurring series — it
+   * is stamped onto each week's row below, not onto the recurrence group.
+   */
+  isRtc: boolean
 }): Promise<{ codes: string[]; calendarWarnings: string[] }> {
   // Authorize: server actions POST to their host route, so the /admin/* proxy
   // wall covers this — but verify the session here too rather than relying on
@@ -73,6 +78,7 @@ export async function createEvent(input: {
     multiplier: input.multiplier,
     access_code: generateAccessCode(),
     recurrence_group_id,
+    is_rtc: input.isRtc,
   }))
 
   // `.select()` so each new row's id comes back — the Calendar loop below needs

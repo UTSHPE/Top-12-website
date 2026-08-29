@@ -13,6 +13,10 @@ re-running one is harmless.
 | 002 | `002_signins_event_fk_cascade.sql` | `ON DELETE CASCADE` on the event FK | **Yes** |
 | 003 | `003_events_is_open.sql` | Adds `events.is_open` | **Yes** |
 | 004 | `004_soft_delete.sql` | Adds `deleted_at` to `events` and `sign_ins` | **Yes** |
+| 005 | `005_events_google_event_id.sql` | Adds `events.google_event_id` | **Yes** |
+| 006 | `006_events_secondary_committee.sql` | Adds `events.secondary_event_type` | **Yes** |
+| 007 | `007_events_is_rtc.sql` | Adds `events.is_rtc` | **Yes** |
+| 008 | `008_members_stipend_eligible.sql` | Adds `members.stipend_eligible` | **Yes** |
 
 ## ⚠️ 001, 003, and 004 must be applied before the app will work
 

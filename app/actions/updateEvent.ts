@@ -39,6 +39,12 @@ export async function updateEvent(input: {
   checkInEnd: string
   /** The manual switch. Saved with the rest so one Save means one state. */
   isOpen: boolean
+  /**
+   * Counts toward RTC. Rides along here for the same reason `isOpen` does, but
+   * note this path is gated to upcoming events — correcting the flag on an
+   * event that already happened goes through setEventRtc instead.
+   */
+  isRtc: boolean
   location: string
 }): Promise<UpdateEventResult> {
   // Same belt-and-braces authorization as createEvent and deleteEvent: the
@@ -113,6 +119,7 @@ export async function updateEvent(input: {
       check_in_start: checkInStart.toISOString(),
       check_in_end: checkInEnd.toISOString(),
       is_open: input.isOpen,
+      is_rtc: input.isRtc,
       location,
     })
     .eq('id', input.eventId)
