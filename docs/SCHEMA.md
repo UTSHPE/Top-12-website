@@ -85,7 +85,7 @@ The attendance table.
 | --- | --- |
 | `id` | PK. |
 | `created_at` | Effectively the check-in timestamp. |
-| `eid` | The member's EID. **Appears to be plain text, not an FK** — see below. |
+| `eid` | The member's EID. FK to `members.eid` — **verified**, see below. |
 | `event_id` | References `events.id`. _Cascade behavior unverified; see migration `002`._ |
 | `points_earned` | Denormalized `base_points × multiplier` at time of check-in, so later edits to an event don't retroactively change awarded points. |
 
@@ -95,12 +95,24 @@ Added by migrations in this repo:
 | --- | --- | --- |
 | `deleted_at` | `004` | Stamped when the parent event is soft-deleted. |
 
-**On `sign_ins.eid`:** `lib/leaderboard.ts:50` falls back to the raw EID
-"so an orphaned sign-in still shows up", which implies there is no FK to
-`members`. This is an inference from application code, not a verified
-constraint. It matters because it determines whether a check-in from an
-unknown EID is even insertable — the app rejects those before attempting an
-insert, so the behavior is the same either way.
+**On `sign_ins.eid`:** there IS a foreign key, `sign_ins_eid_fkey`, pointing at
+`members.eid`. **Verified 2026-08-28** by attempting a `service_role` insert
+with an EID that is not on the roster:
+
+```
+23503  insert or update on table "sign_ins" violates foreign key constraint
+       "sign_ins_eid_fkey"
+       Key (eid)=(…) is not present in table "members".
+```
+
+An earlier version of this file inferred the opposite from `lib/leaderboard.ts`,
+which falls back to the raw EID "so an orphaned sign-in still shows up". That
+fallback is defensive, not evidence — the database will not accept an unknown
+EID at all, so `performCheckIn`'s roster check is a second line of defence
+rather than the only one.
+
+Practical consequence: `sign_ins` can be joined to `members` without worrying
+about unmatched rows, which is what `/admin/rtc` relies on.
 
 ---
 

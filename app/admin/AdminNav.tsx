@@ -2,7 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { FaCalendarDay, FaGauge, FaHouse, FaPlus, FaRankingStar } from 'react-icons/fa6'
+import {
+  FaCalendarDay,
+  FaGauge,
+  FaHouse,
+  FaPlus,
+  FaRankingStar,
+  FaRoad,
+} from 'react-icons/fa6'
 import type { IconType } from 'react-icons'
 
 const ITEMS: { href: string; label: string; Icon: IconType }[] = [
@@ -10,6 +17,7 @@ const ITEMS: { href: string; label: string; Icon: IconType }[] = [
   { href: '/admin/events', label: 'Events', Icon: FaCalendarDay },
   { href: '/admin/create-event', label: 'Create Event', Icon: FaPlus },
   { href: '/admin/leaderboard', label: 'Leaderboard', Icon: FaRankingStar },
+  { href: '/admin/rtc', label: 'RTC', Icon: FaRoad },
 ]
 
 const ITEM_BASE =
