@@ -51,12 +51,24 @@ export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
     ])
   )
 
-  const sorted = [...totals.entries()]
-    .map(([eid, points]) => {
+  // Every roster member is on the board, whether or not they have ever checked
+  // in. Building from `totals` alone meant the board was empty until the first
+  // check-in of the semester, which reads as broken rather than as "nobody has
+  // scored yet" — and a member who has not scored still wants to find their own
+  // name on it.
+  //
+  // Unioned with the sign-in EIDs rather than taken from the roster alone, so
+  // an orphaned check-in still surfaces. The foreign key on `sign_ins.eid`
+  // should make that impossible; this fallback predates it and costs nothing.
+  const eids = new Set<string>([...profiles.keys(), ...totals.keys()])
+
+  const sorted = [...eids]
+    .map((eid) => {
       const profile = profiles.get(eid)
       return {
         eid,
-        points,
+        // No check-ins is a real zero, not a missing value.
+        points: totals.get(eid) ?? 0,
         // Fall back to the raw eid so an orphaned sign-in still shows up.
         name: profile?.name || eid,
         major: profile?.major ?? null,
@@ -66,6 +78,11 @@ export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
     // Every position is unique: most points first, and when two members are
     // level the one who got there first stays ahead. (Name is only a last
     // resort for the same points at the same millisecond.)
+    //
+    // Members who have never checked in have no timestamp, so they all fall
+    // through to the name comparison and sort alphabetically at the bottom.
+    // That is stable between loads, which matters — a board that reshuffles its
+    // zero-point tail on every refresh looks broken.
     .sort(
       (a, b) =>
         b.points - a.points ||
@@ -76,7 +93,13 @@ export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
   return sorted.map((entry, i) => ({ ...entry, rank: i + 1 }))
 }
 
-/** Where a single member currently sits, or null if they have no points yet. */
+/**
+ * Where a single member currently sits.
+ *
+ * Null now means "not on the roster and never checked in" — every roster member
+ * has a rank, including those on zero. Callers that previously read null as
+ * "no points yet" would be wrong; check `points` for that.
+ */
 export async function getRankFor(eid: string): Promise<number | null> {
   const board = await getLeaderboard()
   return board.find((entry) => entry.eid === eid)?.rank ?? null

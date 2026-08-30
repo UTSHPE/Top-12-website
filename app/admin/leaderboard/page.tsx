@@ -15,8 +15,10 @@ export const revalidate = 0
 export default async function AdminLeaderboardPage() {
   const board = await getLeaderboard()
 
-  const podium = board.slice(0, 3)
-  const rows = board.slice(3)
+  // Only a member who has actually scored can take a podium place — see the
+  // member-facing page for why. Everyone else lists below, zeros included.
+  const podium = board.filter((entry) => entry.points > 0).slice(0, 3)
+  const rows = board.slice(podium.length)
 
   return (
     <>
@@ -44,7 +46,7 @@ export default async function AdminLeaderboardPage() {
               <Podium entries={podium} />
             ) : (
               <p className="py-6 text-center text-sm text-[#C7BCAE]">
-                No points earned yet — once members check in they show up here.
+                No points earned yet — the podium fills in once members start checking in.
               </p>
             )}
           </div>

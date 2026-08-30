@@ -21,12 +21,19 @@ export default async function LeaderboardPage() {
   const myEid = cookieStore.get(EID_COOKIE)?.value
   const me = myEid ? (board.find((entry) => entry.eid === myEid) ?? null) : null
 
-  const podium = board.slice(0, 3)
-  const rows = board.slice(3, 3 + VISIBLE_ROWS)
+  // Only a member who has actually scored can take a podium place. The board
+  // now lists everyone on the roster, so slicing the top three off an all-zero
+  // board would hand a gold medal to whoever sorts first alphabetically and
+  // invent a winner out of nothing.
+  const podium = board.filter((entry) => entry.points > 0).slice(0, 3)
+  const rows = board.slice(podium.length, podium.length + VISIBLE_ROWS)
 
   // If they're outside the listed window, pin their row to the end so they can
   // always see where they stand.
-  const pinMe = me !== null && me.rank > 3 && !rows.some((r) => r.eid === me.eid)
+  const pinMe =
+    me !== null &&
+    !podium.some((p) => p.eid === me.eid) &&
+    !rows.some((r) => r.eid === me.eid)
 
   return (
     <>
@@ -49,7 +56,7 @@ export default async function LeaderboardPage() {
               <Podium entries={podium} />
             ) : (
               <p className="py-6 text-center text-sm text-[#C7BCAE]">
-                No points earned yet — check in at an event to get on the board.
+                No points earned yet — check in at an event to claim the top spot.
               </p>
             )}
           </div>
