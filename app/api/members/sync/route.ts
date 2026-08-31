@@ -6,13 +6,19 @@ import { createAdminClient } from '@/lib/supabase/admin'
 export const runtime = 'nodejs'
 
 /**
- * Member sync endpoint for the membership Google Form.
+ * Member sync endpoint for the membership Google Forms.
  *
  * A Google Apps Script `onFormSubmit` trigger POSTs one submission here and we
  * upsert it onto the roster. The route is publicly reachable and writes to
  * `members`, so every request must carry the shared secret.
  *
- * The form is the source of truth for contact details only — `position` is
+ * Two forms feed this, and they disagree about names. The paid form asks for
+ * one "full name" and this route splits it. The non-paid form asks for first
+ * and last name as separate questions, so they arrive already correctly split
+ * and are stored verbatim — see the name block below for why re-splitting them
+ * would be worse than useless.
+ *
+ * The forms are the source of truth for contact details only — `position` is
  * assigned by officers inside the app and is deliberately absent from the
  * payload we build, so a resync can never demote someone.
  */
@@ -49,36 +55,68 @@ export async function POST(request: NextRequest) {
   }
 
   // --- Required fields -----------------------------------------------------
-  // The form marks all three required, so a submission missing one means the
-  // form or the Apps Script changed shape. Fail loudly rather than importing a
+  // The forms mark these required, so a submission missing one means the form
+  // or the Apps Script changed shape. Fail loudly rather than importing a
   // half-record that someone has to find and repair later.
+  //
+  // Checked in the original order — eid, then the name, then email — so a
+  // request missing more than one is still named the same field it always was.
   const eid = text(body.eid).toLowerCase()
   const fullName = collapseWhitespace(text(body.full_name))
+  const givenName = collapseWhitespace(text(body.first_name))
+  const familyName = collapseWhitespace(text(body.last_name))
   const email = text(body.email).toLowerCase()
 
-  for (const [field, value] of [
-    ['eid', eid],
-    ['full_name', fullName],
-    ['email', email],
-  ] as const) {
-    if (!value) return fail(400, 'missing_field', `Missing required field: ${field}.`)
+  if (!eid) return fail(400, 'missing_field', 'Missing required field: eid.')
+
+  // A name arrives one of two ways: pre-split as first_name + last_name, or as
+  // a single full_name this route splits. The pair wins when BOTH halves are
+  // present, because the form that sends it asked for them as separate
+  // questions — the split is already correct, and re-deriving it would turn
+  // "Ana Maria" / "Gonzalez" into "Ana" / "Maria Gonzalez". The heuristic
+  // exists to guess at data we don't have, not to overrule data we do.
+  //
+  // Half a pair is never half-used. One side filled and the other blank means
+  // the form or its script changed shape, and picking a surname out of a first
+  // name would import a broken record nobody goes looking for.
+  const hasSplitPair = Boolean(givenName && familyName)
+
+  if (!hasSplitPair && !fullName) {
+    if (givenName) {
+      return fail(400, 'missing_field', 'Missing required field: last_name (or send full_name instead).')
+    }
+    if (familyName) {
+      return fail(400, 'missing_field', 'Missing required field: first_name (or send full_name instead).')
+    }
+    return fail(400, 'missing_field', 'Missing required field: full_name.')
   }
+
+  if (!email) return fail(400, 'missing_field', 'Missing required field: email.')
 
   if (!looksLikeEmail(email)) {
     return fail(400, 'invalid_email', 'Field "email" is not a valid email address.')
   }
 
-  const [firstName, ...restOfName] = fullName.split(' ')
-  const lastName = restOfName.join(' ')
+  // The existing split, unchanged, and still the path every paid-form
+  // submission takes. Only reached for its result when no pair was sent.
+  const [splitFirstName, ...restOfName] = fullName.split(' ')
+  const splitLastName = restOfName.join(' ')
+
+  const firstName = hasSplitPair ? givenName : splitFirstName
+  // A mononym is a real submission — accept it and leave the surname empty
+  // rather than storing "" and having it render as a stray space. Only the
+  // split path can produce one; a pair has a non-empty last name by definition.
+  const lastName = hasSplitPair ? familyName : splitLastName || null
 
   const payload = {
     eid,
     email,
-    full_name_raw: fullName,
+    // Whatever the form actually said. When only the pair was sent there is no
+    // raw name to keep, so it is composed from the two halves — never null once
+    // a name has been supplied, which is the one thing every caller relies on.
+    full_name_raw: fullName || `${givenName} ${familyName}`,
     first_name: firstName,
-    // A mononym is a real submission — accept it and leave the surname empty
-    // rather than storing "" and having it render as a stray space.
-    last_name: lastName || null,
+    last_name: lastName,
     phone: nullable(body.phone),
     major: nullable(body.major),
     // The roster column is the quoted, capitalised `Class`.
