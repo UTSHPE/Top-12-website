@@ -4,7 +4,8 @@ import { getLeaderboard } from '@/lib/leaderboard'
 import { currentSeason, formatPoints } from '@/lib/format'
 import MemberNav from '@/components/MemberNav'
 import Podium from '@/components/Podium'
-import LeaderboardRow from '@/components/LeaderboardRow'
+import LeaderboardSearch from '@/components/LeaderboardSearch'
+import { toPublicEntries } from '@/lib/leaderboardSearch'
 import { LiveDot } from '@/components/StatusPill'
 
 // Always render fresh — the leaderboard should reflect the latest check-ins.
@@ -26,14 +27,11 @@ export default async function LeaderboardPage() {
   // board would hand a gold medal to whoever sorts first alphabetically and
   // invent a winner out of nothing.
   const podium = board.filter((entry) => entry.points > 0).slice(0, 3)
-  const rows = board.slice(podium.length, podium.length + VISIBLE_ROWS)
 
-  // If they're outside the listed window, pin their row to the end so they can
-  // always see where they stand.
-  const pinMe =
-    me !== null &&
-    !podium.some((p) => p.eid === me.eid) &&
-    !rows.some((r) => r.eid === me.eid)
+  // EIDs are dropped here, on the server. The list below is filtered in the
+  // browser, so anything handed to it is readable in the page source — and this
+  // page is public. `isMe` is resolved on this side for the same reason.
+  const entries = toPublicEntries(board, myEid)
 
   return (
     <>
@@ -62,15 +60,12 @@ export default async function LeaderboardPage() {
           </div>
         </header>
 
-        <div className="mx-auto flex max-w-[720px] flex-col gap-2 px-5 pt-4 pb-6 sm:px-5">
-          {rows.map((entry) => (
-            <LeaderboardRow
-              key={entry.eid}
-              entry={entry}
-              isMe={entry.eid === me?.eid}
-            />
-          ))}
-          {pinMe && me && <LeaderboardRow entry={me} isMe />}
+        <div className="mx-auto max-w-[720px] px-5 pt-4 pb-6 sm:px-5">
+          <LeaderboardSearch
+            entries={entries}
+            podiumCount={podium.length}
+            visibleRows={VISIBLE_ROWS}
+          />
         </div>
       </main>
 

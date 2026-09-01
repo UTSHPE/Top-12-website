@@ -2,8 +2,15 @@ import Avatar from '@/components/Avatar'
 import { formatPoints } from '@/lib/format'
 import type { LeaderboardEntry } from '@/lib/leaderboard'
 
+/**
+ * Everything a row actually renders. Deliberately NOT `LeaderboardEntry`: this
+ * component never reads `eid`, and the searchable board strips it before it
+ * reaches the browser. Naming that here keeps the two in step.
+ */
+type RowEntry = Omit<LeaderboardEntry, 'eid'>
+
 /** "ChemE · Junior" — whichever half we actually have. */
-function subtitleOf(entry: LeaderboardEntry): string {
+function subtitleOf(entry: RowEntry): string {
   return [entry.major, entry.classYear].filter(Boolean).join(' · ')
 }
 
@@ -11,7 +18,7 @@ export default function LeaderboardRow({
   entry,
   isMe = false,
 }: {
-  entry: LeaderboardEntry
+  entry: RowEntry
   isMe?: boolean
 }) {
   const subtitle = isMe ? 'Nice pace — keep checking in!' : subtitleOf(entry)

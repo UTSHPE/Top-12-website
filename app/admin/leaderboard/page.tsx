@@ -1,7 +1,8 @@
 import { getLeaderboard } from '@/lib/leaderboard'
 import { currentSeason } from '@/lib/format'
 import Podium from '@/components/Podium'
-import LeaderboardRow from '@/components/LeaderboardRow'
+import LeaderboardSearch from '@/components/LeaderboardSearch'
+import { toPublicEntries } from '@/lib/leaderboardSearch'
 import AdminTopbar from '@/app/admin/AdminTopbar'
 import { LiveDot } from '@/components/StatusPill'
 
@@ -18,7 +19,12 @@ export default async function AdminLeaderboardPage() {
   // Only a member who has actually scored can take a podium place — see the
   // member-facing page for why. Everyone else lists below, zeros included.
   const podium = board.filter((entry) => entry.points > 0).slice(0, 3)
-  const rows = board.slice(podium.length)
+
+  // No `myEid`: an officer is looking at the chapter here, not at their own
+  // standing, so no row is highlighted. EIDs are stripped for the same reason
+  // as on the member page — the browser does the filtering and does not need
+  // them. No row cap either; officers scan the whole roster.
+  const entries = toPublicEntries(board)
 
   return (
     <>
@@ -51,11 +57,9 @@ export default async function AdminLeaderboardPage() {
             )}
           </div>
 
-          {rows.length > 0 && (
-            <div className="mt-4 flex flex-col gap-2">
-              {rows.map((entry) => (
-                <LeaderboardRow key={entry.eid} entry={entry} />
-              ))}
+          {entries.length > podium.length && (
+            <div className="mt-4">
+              <LeaderboardSearch entries={entries} podiumCount={podium.length} />
             </div>
           )}
         </div>
