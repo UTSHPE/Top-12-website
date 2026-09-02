@@ -1,4 +1,3 @@
-import Avatar from '@/components/Avatar'
 import { formatPoints } from '@/lib/format'
 import type { LeaderboardEntry } from '@/lib/leaderboard'
 
@@ -21,29 +20,26 @@ export default function LeaderboardRow({
   entry: RowEntry
   isMe?: boolean
 }) {
-  const subtitle = isMe ? 'Nice pace — keep checking in!' : subtitleOf(entry)
+  const subtitle = subtitleOf(entry)
 
   return (
     <div
-      className={`grid grid-cols-[28px_40px_1fr_auto] items-center gap-3.5 rounded-[13px] px-4 sm:grid-cols-[34px_40px_1fr_auto] ${
+      className={`grid grid-cols-[28px_1fr_auto] items-center gap-3.5 rounded-[13px] px-4 sm:grid-cols-[34px_1fr_auto] ${
         isMe
           ? 'bg-primary py-[13px] text-white shadow-[0_8px_20px_rgba(191,87,0,.28)]'
           : 'rowlift bg-surface py-3 shadow-[0_2px_8px_rgba(0,0,0,.05)]'
       }`}
     >
+      {/* Every position in the list reads in SHPE blue, top three included —
+          a rank that reaches a row through search looks the same as any other.
+          Your own row keeps white, which is what reads on the orange fill. */}
       <div
-        className={`font-display text-center font-extrabold ${isMe ? '' : 'text-faint'}`}
+        className={`font-display text-center font-extrabold ${
+          isMe ? '' : 'text-secondary'
+        }`}
       >
         {entry.rank}
       </div>
-
-      {isMe ? (
-        <span className="flex size-10 flex-none items-center justify-center rounded-full bg-white/20 text-xs font-bold">
-          You
-        </span>
-      ) : (
-        <Avatar name={entry.name} size={40} />
-      )}
 
       <div className="min-w-0">
         <div className="truncate text-[15px] font-bold">

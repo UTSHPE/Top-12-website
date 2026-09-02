@@ -63,7 +63,9 @@ export default function LeaderboardSearch({
           onChange={(e) => setQuery(e.target.value)}
           placeholder={placeholder}
           aria-label="Search the leaderboard"
-          className="w-full rounded-sm border-[1.5px] border-line bg-surface py-2.5 pr-10 pl-9 text-sm font-semibold outline-none transition-colors focus:border-primary-bright"
+          // Chrome draws its own clear button inside type="search"; hiding it
+          // leaves only the styled one below, which matches the design tokens.
+          className="w-full rounded-sm border-[1.5px] border-line bg-surface py-2.5 pr-10 pl-9 text-sm font-semibold outline-none transition-colors focus:border-primary-bright [&::-webkit-search-cancel-button]:hidden"
         />
         {trimmed && (
           <button

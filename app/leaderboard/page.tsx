@@ -11,9 +11,6 @@ import { LiveDot } from '@/components/StatusPill'
 // Always render fresh — the leaderboard should reflect the latest check-ins.
 export const revalidate = 0
 
-/** How far down the board we list before it stops being interesting. */
-const VISIBLE_ROWS = 12
-
 export default async function LeaderboardPage() {
   const [board, cookieStore] = await Promise.all([getLeaderboard(), cookies()])
 
@@ -61,11 +58,9 @@ export default async function LeaderboardPage() {
         </header>
 
         <div className="mx-auto max-w-[720px] px-5 pt-4 pb-6 sm:px-5">
-          <LeaderboardSearch
-            entries={entries}
-            podiumCount={podium.length}
-            visibleRows={VISIBLE_ROWS}
-          />
+          {/* No row cap: members see the whole chapter, same as the officer
+              console. The search box is how you get to a name quickly. */}
+          <LeaderboardSearch entries={entries} podiumCount={podium.length} />
         </div>
       </main>
 
