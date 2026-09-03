@@ -68,6 +68,31 @@ export function whenLabel(iso: string, now: Date = new Date()): string {
   return formatDate(iso)
 }
 
+/**
+ * "Maiah Holmes", or just "Maiah" when the roster has no last name.
+ *
+ * About one member in seventeen has a null `last_name` — rows typed by hand
+ * into the Supabase dashboard, and form submissions that arrived as a single
+ * name. Interpolating those straight into a template printed the string
+ * "Maiah null" on the leaderboard, so every display name is built here.
+ *
+ * `fallback` is for callers that must render something even for a member with
+ * no name at all; without one an empty string comes back and the caller
+ * decides.
+ */
+export function memberName(
+  first: string | null | undefined,
+  last: string | null | undefined,
+  fallback = ''
+): string {
+  return (
+    [first, last]
+      .map((part) => part?.trim())
+      .filter((part): part is string => Boolean(part))
+      .join(' ') || fallback
+  )
+}
+
 /** Point totals are `base × multiplier`, so they can land on a half. */
 export const formatPoints = (points: number) =>
   Number.isInteger(points) ? String(points) : points.toFixed(1)

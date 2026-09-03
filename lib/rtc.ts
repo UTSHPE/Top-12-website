@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { termBounds } from '@/lib/format'
+import { memberName, termBounds } from '@/lib/format'
 
 /**
  * RTC attendance reporting.
@@ -151,7 +151,7 @@ export async function getRtcReport(range: RtcRange): Promise<RtcReport> {
       )
       return {
         eid: m.eid,
-        name: `${m.first_name ?? ''} ${m.last_name ?? ''}`.trim() || m.eid,
+        name: memberName(m.first_name, m.last_name, m.eid),
         count: events.length,
         events,
       }

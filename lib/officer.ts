@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { memberName } from '@/lib/format'
 
 export type Officer = {
   /** Display name — falls back to the email local-part if no roster row. */
@@ -33,7 +34,7 @@ export async function getOfficer(): Promise<Officer | null> {
     .eq('email', user.email)
     .maybeSingle()
 
-  const rosterName = member ? `${member.first_name} ${member.last_name}`.trim() : ''
+  const rosterName = member ? memberName(member.first_name, member.last_name) : ''
   const name = rosterName || user.email.split('@')[0]
 
   return {

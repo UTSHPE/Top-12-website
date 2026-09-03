@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { memberName } from '@/lib/format'
 
 export type LeaderboardEntry = {
   eid: string
@@ -44,7 +45,7 @@ export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
     (members ?? []).map((m) => [
       m.eid,
       {
-        name: `${m.first_name} ${m.last_name}`.trim(),
+        name: memberName(m.first_name, m.last_name),
         major: (m.major as string | null) ?? null,
         classYear: (m.Class as string | null) ?? null,
       },
