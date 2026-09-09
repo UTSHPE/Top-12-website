@@ -79,18 +79,36 @@ export const formatPointsLabel = (points: number) =>
 /**
  * A roster row's two name columns as one display name.
  *
- * `fallback` is what to return when there is no name to show — the EID, where
- * an identifiable row still has to appear (the leaderboard, the RTC report),
- * or `''` where a nameless row should be dropped instead of rendered blank.
- * Both halves are coalesced because a roster row typed by hand through the
- * Supabase dashboard can carry a null in either one.
+ * About one member in seventeen has a null `last_name` — rows typed by hand
+ * into the Supabase dashboard, and form submissions that arrived as a single
+ * name. Interpolating those straight into a template printed the string
+ * "Maiah null" on the leaderboard, so every display name is built here.
+ *
+ * Each half is trimmed BEFORE they are joined, not after. A hand-typed row
+ * carrying a trailing space in `first_name` and a leading one in `last_name`
+ * would otherwise render "Maiah   Holmes" with three spaces — and on the raffle
+ * list, where duplicate names are found by exact string match, that messy row
+ * would fail to pair with the same name entered cleanly.
+ *
+ * `fallback` is what to return when there is no name at all. It defaults to
+ * `''` because both of the callers that omit it handle the empty case
+ * themselves and need to see it: `getOfficer` falls back to the email prefix,
+ * and the leaderboard falls back to the raw EID so an orphaned sign-in still
+ * appears. Pass it explicitly where the caller has no such fallback of its own
+ * — the RTC report passes the EID, and the raffle list passes `''` and then
+ * drops the row, since a blank slice on a wheel is worse than one fewer entry.
  */
 export function memberName(
   first: string | null | undefined,
   last: string | null | undefined,
-  fallback: string
+  fallback = ''
 ): string {
-  return `${first ?? ''} ${last ?? ''}`.trim() || fallback
+  return (
+    [first, last]
+      .map((part) => part?.trim())
+      .filter((part): part is string => Boolean(part))
+      .join(' ') || fallback
+  )
 }
 
 export type Term = {
