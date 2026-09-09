@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { memberName } from '@/lib/format'
 
 export type ChapterEvent = {
   id: string
@@ -408,5 +409,122 @@ export async function getEventForEdit(eventId: string): Promise<EditableEvent | 
       secondaryEventType: row.secondary_event_type || null,
     }),
     headcount: signIns?.length ?? 0,
+  }
+}
+
+export type EventSignIns = {
+  event: {
+    id: string
+    title: string
+    /** `calendar_start` — when the event runs. ISO string. */
+    date: string
+    committee: string
+  }
+  /** One entry per member who checked in, alphabetical. Names only. */
+  names: string[]
+  /** Names that appear in `names` more than once, listed once each. */
+  duplicates: string[]
+}
+
+/**
+ * Everyone who has checked into one event, as a list of names — the raffle
+ * list an officer pastes into a spinner wheel at a general meeting.
+ *
+ * Deliberately does NOT filter on the calendar window the way
+ * `getUpcomingEvents` does. The main use is opening this mid-meeting while
+ * people are still typing the code in, so it has to read the same whether the
+ * event is live, finished, or hasn't started. The page pairs that with
+ * `revalidate = 0`, so a refresh picks up whoever has arrived since.
+ *
+ * Returns null for an id that doesn't exist or has been soft-deleted, so the
+ * caller can 404 rather than render a wheel over nothing.
+ *
+ * Two round trips and an in-memory join, matching `getRtcReport`: an event
+ * holds a few hundred sign-ins at most.
+ */
+export async function getEventSignIns(eventId: string): Promise<EventSignIns | null> {
+  const supabase = createAdminClient()
+
+  const [{ data: row }, { data: signInRows }] = await Promise.all([
+    supabase
+      .from('events')
+      .select('id, title, event_type, secondary_event_type, calendar_start')
+      .eq('id', eventId)
+      .is('deleted_at', null)
+      .maybeSingle(),
+    supabase.from('sign_ins').select('eid').eq('event_id', eventId).is('deleted_at', null),
+  ])
+
+  if (!row) return null
+
+  // One entry per person, not per row. The unique index on (event_id, eid)
+  // already makes a second row impossible, so this is belt-and-braces — but a
+  // duplicated EID would hand one member two slices of the wheel, which is the
+  // one way this page could quietly rig a raffle.
+  //
+  // Deduped on the lowercased EID, since EID case never matters anywhere in
+  // this app, while the roster's own spelling is what gets kept — `.in()` below
+  // matches case-sensitively, so lowercasing the values themselves would miss
+  // every roster row typed in caps through the Supabase dashboard.
+  const seenEids = new Set<string>()
+  const eids: string[] = []
+  for (const signIn of signInRows ?? []) {
+    const key = signIn.eid.toLowerCase()
+    if (seenEids.has(key)) continue
+    seenEids.add(key)
+    eids.push(signIn.eid)
+  }
+
+  // Skip the second round trip when nobody has checked in yet. An empty `.in()`
+  // list is an easy way to accidentally select the whole roster.
+  const memberRows =
+    eids.length === 0
+      ? []
+      : ((await supabase.from('members').select('eid, first_name, last_name').in('eid', eids))
+          .data ?? [])
+
+  // Keyed lowercase on both sides. `sign_ins.eid` is a foreign key to
+  // `members.eid` so the spellings already match, but EID case never matters
+  // anywhere else in this app and a roster row typed by hand through the
+  // Supabase dashboard keeps whatever casing it was given.
+  const nameByEid = new Map(
+    memberRows.map((m) => [m.eid.toLowerCase(), memberName(m.first_name, m.last_name, '')])
+  )
+
+  // Nameless rows are dropped rather than filled in with the EID: a blank slice
+  // on the wheel is worse than one fewer entry, and an EID on the projector is
+  // a name nobody in the room can read out.
+  const names = eids
+    .map((eid) => nameByEid.get(eid.toLowerCase()) ?? '')
+    .filter((name) => name !== '')
+    // Alphabetical so the order is stable across the refreshes this page is
+    // built around — a list that reshuffles every time someone new checks in is
+    // impossible to scan on a projector.
+    .sort((a, b) => a.localeCompare(b))
+
+  // Repeated names are NOT merged. Two members genuinely called "Daniel
+  // Ramírez" are two people and each keeps an entry — collapsing them would
+  // silently halve one person's odds. They are reported so the page can say the
+  // wheel can't tell them apart.
+  const seen = new Set<string>()
+  const repeated = new Set<string>()
+  for (const name of names) {
+    if (seen.has(name)) repeated.add(name)
+    else seen.add(name)
+  }
+  const duplicates = [...repeated]
+
+  return {
+    event: {
+      id: row.id,
+      title: row.title,
+      date: row.calendar_start,
+      committee: committeeLabel({
+        eventType: row.event_type ?? 'Other',
+        secondaryEventType: row.secondary_event_type || null,
+      }),
+    },
+    names,
+    duplicates,
   }
 }

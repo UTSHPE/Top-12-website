@@ -101,6 +101,23 @@ export const formatPoints = (points: number) =>
 export const formatPointsLabel = (points: number) =>
   `${formatPoints(points)} ${points === 1 ? 'point' : 'points'}`
 
+/**
+ * A roster row's two name columns as one display name.
+ *
+ * `fallback` is what to return when there is no name to show — the EID, where
+ * an identifiable row still has to appear (the leaderboard, the RTC report),
+ * or `''` where a nameless row should be dropped instead of rendered blank.
+ * Both halves are coalesced because a roster row typed by hand through the
+ * Supabase dashboard can carry a null in either one.
+ */
+export function memberName(
+  first: string | null | undefined,
+  last: string | null | undefined,
+  fallback: string
+): string {
+  return `${first ?? ''} ${last ?? ''}`.trim() || fallback
+}
+
 export type Term = {
   /** "Fall 2025" — the same string `currentSeason` has always returned. */
   label: string
