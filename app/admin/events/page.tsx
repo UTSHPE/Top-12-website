@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { FaPen } from 'react-icons/fa6'
+import { FaPen, FaUserGroup } from 'react-icons/fa6'
 import { committeeLabel, getAllEventsWithAttendance, isUpcoming } from '@/lib/events'
 import { formatDateLong, formatPoints } from '@/lib/format'
 import AdminTopbar, { NewEventButton } from '@/app/admin/AdminTopbar'
@@ -72,7 +72,16 @@ export default async function OfficerAnalyticsPage() {
                       {committeeLabel(event)}
                     </span>
                     <span className="text-muted">{formatDateLong(event.start)}</span>
-                    <span className="font-extrabold text-primary">{event.headcount}</span>
+                    {/* The headcount is the natural handle for "who was
+                        there", so it doubles as the link to the raffle list. */}
+                    <span>
+                      <Link
+                        href={`/admin/events/${event.id}/sign-ins`}
+                        className="font-extrabold text-primary underline-offset-4 hover:underline"
+                      >
+                        {event.headcount}
+                      </Link>
+                    </span>
                     <span className="text-muted">
                       {formatPoints(event.pointsAwarded)} pts
                     </span>
@@ -101,6 +110,19 @@ export default async function OfficerAnalyticsPage() {
                       />
                     </span>
                     <span className="flex justify-end gap-1">
+                      {/* On every row, past events and empty ones included —
+                          unlike the edit pencil. An officer opens this the
+                          moment an event goes live and watches names arrive on
+                          refresh, so a zero headcount is exactly when it's
+                          needed rather than a reason to hide it. */}
+                      <Link
+                        href={`/admin/events/${event.id}/sign-ins`}
+                        aria-label={`Raffle list for ${event.title}`}
+                        title={`Raffle list for ${event.title}`}
+                        className="flex size-8 items-center justify-center rounded-sm text-[#A99E8F] transition-colors hover:bg-primary/10 hover:text-primary"
+                      >
+                        <FaUserGroup aria-hidden className="size-3.5" />
+                      </Link>
                       {isUpcoming(event) && (
                         <Link
                           href={`/admin/events/${event.id}/edit`}
