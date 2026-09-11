@@ -72,11 +72,10 @@ export function defaultRtcRange(now: Date = new Date()): RtcRange {
 }
 
 /**
- * One row per stipend-group member, fewest RTC events first.
+ * One row per stipend-group member, most RTC events first.
  *
- * Whoever is furthest behind is who the VPE needs to chase, so they sort to the
- * top. Members with nothing attended are listed with a 0 rather than dropped —
- * they are the most important rows on the page.
+ * Members with nothing attended are listed with a 0 at the bottom rather than
+ * dropped — they are who the VPE needs to chase.
  *
  * Three reads and an in-memory join, matching how getDashboardStats aggregates:
  * the stipend group is a small fixed set and a term holds a handful of RTC
@@ -156,9 +155,9 @@ export async function getRtcReport(range: RtcRange): Promise<RtcReport> {
         events,
       }
     })
-    // Fewest first. Name breaks ties so the order is stable between loads
+    // Most first. Name breaks ties so the order is stable between loads
     // rather than however Postgres happened to return the rows.
-    .sort((a, b) => a.count - b.count || a.name.localeCompare(b.name))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
 
   return {
     rows,

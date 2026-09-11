@@ -136,7 +136,7 @@ export default async function RtcReportPage({
                 Stipend group — RTC events attended
               </h2>
               <p className="mt-0.5 text-xs text-faint">
-                Fewest first. {attendedAtLeastOne} of {report.rows.length} have attended
+                Most first. {attendedAtLeastOne} of {report.rows.length} have attended
                 at least one. Attendance only — points and the leaderboard are not
                 involved.
               </p>
