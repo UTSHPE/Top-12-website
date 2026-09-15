@@ -17,6 +17,7 @@ re-running one is harmless.
 | 006 | `006_events_secondary_committee.sql` | Adds `events.secondary_event_type` | **Yes** |
 | 007 | `007_events_is_rtc.sql` | Adds `events.is_rtc` | **Yes** |
 | 008 | `008_members_stipend_eligible.sql` | Adds `members.stipend_eligible` | **Yes** |
+| 009 | `009_important_links.sql` | Creates `important_links` (RLS on, no policy) | **Yes** |
 
 ## ⚠️ 001, 003, and 004 must be applied before the app will work
 
@@ -32,6 +33,18 @@ error. If you see that after deploying, you have not run these yet.
 
 `002` is the exception: it is a safety net for hard deletes performed outside
 the app, so the app works without it. Run it anyway.
+
+## 009 ships empty on purpose
+
+`009` creates `important_links` but seeds no rows. The table exists precisely so
+the officer links are **not** in this repository — writing them into a migration
+would put them right back. Add the rows through the Supabase table editor (or a
+local script you don't commit) after running the migration; the dashboard panel
+renders an empty state until you do.
+
+Its RLS block is load-bearing. The table has RLS enabled and **no policy**, so
+only the service-role key can read it. `NEXT_PUBLIC_SUPABASE_ANON_KEY` is in the
+browser bundle, so a readable policy here would make the links public again.
 
 ## Destructive steps to know about
 
