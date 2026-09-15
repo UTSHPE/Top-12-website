@@ -4,6 +4,7 @@ import { currentSeason, formatDate, greeting } from '@/lib/format'
 import { getOfficer } from '@/lib/officer'
 import { LiveDot } from '@/components/StatusPill'
 import PresentCodeButton from '@/components/PresentCodeButton'
+import ImportantLinks from '@/components/ImportantLinks'
 import AdminTopbar, { NewEventButton } from './AdminTopbar'
 
 export const revalidate = 0
@@ -121,6 +122,10 @@ export default async function OfficerDashboardPage() {
             </div>
           )}
         </section>
+
+        <div className="mt-[22px]">
+          <ImportantLinks />
+        </div>
       </div>
     </>
   )

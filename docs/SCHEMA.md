@@ -129,6 +129,27 @@ about unmatched rows, which is what `/admin/rtc` relies on.
 empty or RLS is filtering every row. It cannot be resolved without working
 `service_role` credentials.
 
+**`important_links` is the one table whose RLS posture is deliberate, documented,
+and verified.** Created by `docs/migrations/009` with RLS **enabled and no policy
+at all**. That is the entire reason the table exists — the links were moved out
+of the Git repo, and a `for select using (true)` policy would leak them again to
+anyone who reads `NEXT_PUBLIC_SUPABASE_ANON_KEY` out of the browser bundle.
+
+**Verified** by querying the same table with both keys back to back:
+
+```
+ANON    select -> 0 rows
+ANON    insert -> BLOCKED (42501 row-level security policy)
+SERVICE select -> 12 rows
+```
+
+This is the one case where the "empty array" result above is *not* ambiguous.
+An anon `SELECT` returning `[]` normally can't distinguish "RLS filtered
+everything" from "the table is empty" — but the service-role client reading 12
+rows from that same table at that same moment rules out the second explanation.
+Re-run both halves together if you ever need to re-confirm it; the anon half
+alone proves nothing.
+
 **Unverified:** the actual policy definitions on all three tables, and whether
 RLS is enabled on `events` and `members` at all.
 
