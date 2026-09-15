@@ -27,9 +27,6 @@ export default async function ImportantLinks() {
     <section className="overflow-hidden rounded-lg bg-surface shadow-card">
       <div className="flex items-center justify-between gap-4 border-b border-hairline px-5 py-4">
         <h2 className="font-display text-[15px] font-bold">Important links</h2>
-        <a href="#" className="text-[13px] font-semibold text-secondary hover:underline">
-          Suggest a link
-        </a>
       </div>
 
       {links.length === 0 ? (
