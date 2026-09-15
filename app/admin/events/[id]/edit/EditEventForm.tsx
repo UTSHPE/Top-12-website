@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import {
   FaLock,
   FaLocationDot,
+  FaRegCircleDot,
   FaRegClock,
   FaRoad,
   FaTriangleExclamation,
@@ -17,7 +18,7 @@ import ErrorStrip from '@/components/ErrorStrip'
 import { INPUT, LABEL, Panel, DateField, CheckboxField } from '@/components/EventFormFields'
 
 /**
- * Edit the timing and location of an event that hasn't started.
+ * Edit the title, timing, and location of an event that hasn't started.
  *
  * Both windows sit in one panel because their relationship is the thing that
  * goes wrong: a check-in window that misses the event is the failure this
@@ -36,6 +37,7 @@ export default function EditEventForm({ event }: { event: EditableEvent }) {
   const [checkInEnd, setCheckInEnd] = useState(() => toLocalInputValue(event.checkInEnd))
   const [isOpen, setIsOpen] = useState(event.checkInEnabled)
   const [isRtc, setIsRtc] = useState(event.isRtc)
+  const [title, setTitle] = useState(event.title)
   const [location, setLocation] = useState(event.location)
 
   const [submitting, setSubmitting] = useState(false)
@@ -58,6 +60,11 @@ export default function EditEventForm({ event }: { event: EditableEvent }) {
     setSubmitting(true)
     setErrorMsg('')
 
+    if (!title.trim()) {
+      setErrorMsg('Give the event a title.')
+      setSubmitting(false)
+      return
+    }
     if (!startAt || !endAt) {
       setErrorMsg('Enter a valid event start and end time.')
       setSubmitting(false)
@@ -84,6 +91,7 @@ export default function EditEventForm({ event }: { event: EditableEvent }) {
     try {
       const { calendarWarning } = await updateEvent({
         eventId: event.id,
+        title,
         calendarStart: startAt.toISOString(),
         calendarEnd: endAt.toISOString(),
         checkInStart: checkInStartAt.toISOString(),
@@ -150,7 +158,7 @@ export default function EditEventForm({ event }: { event: EditableEvent }) {
             {event.title}
           </h1>
           <p className="text-sm text-faint">
-            Only the timing, location, and RTC status can be changed.
+            Only the title, timing, location, and RTC status can be changed.
           </p>
         </div>
 
@@ -175,6 +183,25 @@ export default function EditEventForm({ event }: { event: EditableEvent }) {
               </b>
             </span>
           </div>
+
+          <Panel eyebrow="Event details" color="var(--color-primary)" Icon={FaRegCircleDot}>
+            <div>
+              <label className={LABEL} htmlFor="title">
+                Title
+              </label>
+              <input
+                id="title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+                placeholder="Careers in Semiconductors"
+                className={INPUT}
+              />
+              <p className="mt-1.5 text-xs text-faint">
+                Also updated on the Google Calendar entry. Existing check-ins are unaffected.
+              </p>
+            </div>
+          </Panel>
 
           {/* Next to the committee above, because it is the same kind of
               fact about the event. Unlike everything else on this form it can
