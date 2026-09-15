@@ -88,12 +88,12 @@ export async function deleteCalendarEvent(eventId: string): Promise<void> {
 }
 
 /**
- * Move an existing calendar entry and/or change its location.
+ * Rename or move an existing calendar entry and/or change its location.
  *
  * `patch`, never `update`: update replaces the whole resource, so any field
  * omitted from the body — description, summary, attendees, the recurrence rule —
  * would be wiped. Patch merges, which is the only correct verb for an edit that
- * knows about three fields and nothing else.
+ * knows about four fields and nothing else.
  *
  * Returns 'missing' rather than throwing when the entry is gone. The caller has
  * to report that as a warning but must not treat it as a failed edit — the
@@ -110,6 +110,7 @@ export async function deleteCalendarEvent(eventId: string): Promise<void> {
 export async function patchCalendarEvent(
   eventId: string,
   input: {
+    title: string
     /** RFC3339 timestamps, as stored on the event row. */
     calendarStart: string
     calendarEnd: string
@@ -121,6 +122,7 @@ export async function patchCalendarEvent(
       calendarId: CALENDAR_ID,
       eventId,
       requestBody: {
+        summary: input.title,
         start: { dateTime: input.calendarStart, timeZone: CALENDAR_TIME_ZONE },
         end: { dateTime: input.calendarEnd, timeZone: CALENDAR_TIME_ZONE },
         // Send '' rather than undefined to clear a location an officer emptied.

@@ -35,7 +35,7 @@ export default async function EditEventPage({
             </h1>
             <p className="mb-6 text-sm text-muted">
               It began {formatDateLong(event.start)} at {formatTime(event.start)}. Only
-              upcoming events can have their time or location changed.
+              upcoming events can be edited.
             </p>
             <Link
               href="/admin/events"

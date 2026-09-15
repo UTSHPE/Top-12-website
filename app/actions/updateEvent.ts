@@ -14,7 +14,7 @@ export type UpdateEventResult = {
 }
 
 /**
- * Change the timing and location of an event that hasn't happened yet.
+ * Change the title, timing, and location of an event that hasn't happened yet.
  *
  * Two independent windows: the calendar window (when the event runs, mirrored
  * to Google) and the check-in window (when a code actually works, internal
@@ -22,9 +22,10 @@ export type UpdateEventResult = {
  * lib/checkin.ts gates a check-in on `withinWindow && is_open !== false`, so
  * the timestamps are not vestigial and neither is the flag.
  *
- * Title, committee, points, and above all the access code stay immutable: the
- * code may already be printed on a flyer, and silently reissuing it would
- * strand everyone holding the old one.
+ * Committee, points, and above all the access code stay immutable: the code may
+ * already be printed on a flyer, and silently reissuing it would strand everyone
+ * holding the old one. The title is safe to change — sign_ins reference the
+ * event by id, so a rename carries every existing check-in with it.
  *
  * Order matters — Supabase first, Google second. The database is the source of
  * truth for check-in, so a Google outage must never block an officer from
@@ -32,6 +33,7 @@ export type UpdateEventResult = {
  */
 export async function updateEvent(input: {
   eventId: string
+  title: string
   /** ISO instants, already resolved from chapter-local wall time by the form. */
   calendarStart: string
   calendarEnd: string
@@ -73,9 +75,12 @@ export async function updateEvent(input: {
   // the form sits open.
   if (new Date(event.calendar_start).getTime() <= Date.now()) {
     throw new Error(
-      'This event has already started, so its time and location can no longer be changed.'
+      'This event has already started, so it can no longer be edited.'
     )
   }
+
+  const title = input.title.trim()
+  if (!title) throw new Error('Give the event a title.')
 
   const start = new Date(input.calendarStart)
   const end = new Date(input.calendarEnd)
@@ -114,6 +119,7 @@ export async function updateEvent(input: {
   const { error: updateError } = await supabase
     .from('events')
     .update({
+      title,
       calendar_start: start.toISOString(),
       calendar_end: end.toISOString(),
       check_in_start: checkInStart.toISOString(),
@@ -127,7 +133,7 @@ export async function updateEvent(input: {
   if (updateError) throw new Error(updateError.message)
 
   // Only now, with the row already committed, mirror onto the chapter calendar.
-  // Only the calendar window and location go to Google — the check-in window
+  // Only the title, calendar window, and location go to Google — the check-in window
   // and `is_open` are internal and have no counterpart on a calendar entry.
   //
   // Imported dynamically for the same reason deleteEvent does it: the calendar
@@ -142,6 +148,7 @@ export async function updateEvent(input: {
     try {
       const { patchCalendarEvent } = await import('@/lib/google/calendar')
       const outcome = await patchCalendarEvent(event.google_event_id, {
+        title,
         calendarStart: start.toISOString(),
         calendarEnd: end.toISOString(),
         location,
@@ -151,7 +158,7 @@ export async function updateEvent(input: {
       // either way nothing on the shared calendar shows this event any more.
       if (outcome === 'missing') {
         calendarWarning =
-          'The event was updated, but it no longer has a live entry on the Google Calendar, so the new time is not showing there. Add it to the calendar by hand.'
+          'The event was updated, but it no longer has a live entry on the Google Calendar, so the changes are not showing there. Add it to the calendar by hand.'
       }
     } catch (err) {
       // Read the reason inline rather than importing calendarErrorMessage: the
@@ -162,7 +169,7 @@ export async function updateEvent(input: {
           ?.error?.message ??
         (err instanceof Error ? err.message : 'Unknown Google Calendar error')
 
-      console.error('[gcal] patch failed:', event.title, reason)
+      console.error('[gcal] patch failed:', title, reason)
       calendarWarning = `The event was updated, but the Google Calendar entry could not be changed (${reason}). Update it by hand.`
     }
   }
