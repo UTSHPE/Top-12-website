@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { fetchAll } from '@/lib/supabase/fetchAll'
 import { memberName, termBounds } from '@/lib/format'
 
 /**
@@ -120,16 +121,20 @@ export async function getRtcReport(range: RtcRange): Promise<RtcReport> {
   const signIns =
     events.length === 0 || members.length === 0
       ? []
-      : ((
-          await supabase
-            .from('sign_ins')
-            .select('eid, event_id')
-            .is('deleted_at', null)
-            .in(
-              'event_id',
-              events.map((e) => e.id)
-            )
-        ).data ?? [])
+      : (
+          await fetchAll((from, to) =>
+            supabase
+              .from('sign_ins')
+              .select('eid, event_id')
+              .is('deleted_at', null)
+              .in(
+                'event_id',
+                events.map((e) => e.id)
+              )
+              .order('id')
+              .range(from, to)
+          )
+        ).data
 
   // Keyed on the EID exactly as stored. `sign_ins.eid` is a foreign key to
   // `members.eid` (verified — see docs/SCHEMA.md), so both sides already hold

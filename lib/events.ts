@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { fetchAll } from '@/lib/supabase/fetchAll'
 import { memberName } from '@/lib/format'
 
 export type ChapterEvent = {
@@ -296,7 +297,14 @@ export async function getDashboardStats(recentLimit = 8): Promise<DashboardStats
       .select(EVENT_COLUMNS)
       .is('deleted_at', null)
       .order('calendar_start', { ascending: false }),
-    supabase.from('sign_ins').select('event_id, points_earned').is('deleted_at', null),
+    fetchAll((from, to) =>
+      supabase
+        .from('sign_ins')
+        .select('event_id, points_earned')
+        .is('deleted_at', null)
+        .order('id')
+        .range(from, to)
+    ),
   ])
 
   const headcounts = new Map<string, number>()
