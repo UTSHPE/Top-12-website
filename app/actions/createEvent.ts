@@ -62,6 +62,35 @@ export async function createEvent(input: {
     throw new Error('Choose a different committee for the joint host.')
   }
 
+  // Window ordering, settled server-side — the same rule updateEvent enforces.
+  //
+  // Without it a series can be written end-before-start: Postgres has no
+  // opinion on the pair, so the rows insert cleanly and the app looks fine,
+  // but Google rejects every calendar insert for an empty time range. The
+  // result is events that exist on the website and never reach the chapter
+  // calendar, reported only as a warning on the success card. An eleven-week
+  // study-night series was lost that way. The form should keep the fields in
+  // order, but a server action is a public endpoint and cannot rely on it.
+  if (
+    Number.isNaN(input.calendarStart.getTime()) ||
+    Number.isNaN(input.calendarEnd.getTime())
+  ) {
+    throw new Error('Enter a valid event start and end time.')
+  }
+  if (input.calendarEnd.getTime() <= input.calendarStart.getTime()) {
+    throw new Error('The event has to end after it starts.')
+  }
+
+  if (
+    Number.isNaN(input.checkInStart.getTime()) ||
+    Number.isNaN(input.checkInEnd.getTime())
+  ) {
+    throw new Error('Enter a valid check-in opening and closing time.')
+  }
+  if (input.checkInEnd.getTime() <= input.checkInStart.getTime()) {
+    throw new Error('Check-in has to close after it opens.')
+  }
+
   const recurrence_group_id = input.isRecurring ? crypto.randomUUID() : null
 
   const rows = Array.from({ length: input.weekCount }, (_, i) => ({
