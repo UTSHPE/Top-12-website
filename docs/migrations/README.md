@@ -18,6 +18,7 @@ re-running one is harmless.
 | 007 | `007_events_is_rtc.sql` | Adds `events.is_rtc` | **Yes** |
 | 008 | `008_members_stipend_eligible.sql` | Adds `members.stipend_eligible` | **Yes** |
 | 009 | `009_important_links.sql` | Creates `important_links` (RLS on, no policy) | **Yes** |
+| 010 | `010_important_links_t12.sql` | Allows `'T12'` (whole officer team) as a link committee | **Yes** |
 
 ## ⚠️ 001, 003, and 004 must be applied before the app will work
 

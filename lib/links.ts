@@ -2,10 +2,10 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 /**
  * The committees a link can belong to. Must stay in sync with the CHECK
- * constraint in docs/migrations/009 — this union is what picks a row's dot
+ * constraint in docs/migrations/010 — this union is what picks a row's dot
  * color, and the constraint is what stops a typo reaching the panel.
  */
-export const COMMITTEES = ['Treasurer', 'VPI', 'Secretary', 'Chapter Development'] as const
+export const COMMITTEES = ['Treasurer', 'VPI', 'Secretary', 'Chapter Development', 'T12'] as const
 
 export type Committee = (typeof COMMITTEES)[number]
 

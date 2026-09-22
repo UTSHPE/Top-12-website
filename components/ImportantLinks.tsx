@@ -7,6 +7,8 @@ const COMMITTEE_DOT: Record<Committee, string> = {
   VPI: 'bg-primary',
   Secretary: 'bg-secondary',
   'Chapter Development': 'bg-gold',
+  // Everyone on the officer team, not one committee.
+  T12: 'bg-ink',
 }
 
 /**
