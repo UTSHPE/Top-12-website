@@ -154,9 +154,12 @@ export async function updateEvent(input: {
         location,
       })
 
-      // Covers both a missing entry and a deleted-but-still-addressable one;
-      // either way nothing on the shared calendar shows this event any more.
-      if (outcome === 'missing') {
+      // A hand-deleted entry comes back as 'restored' and needs no warning —
+      // the edit landed on the calendar. 'missing' means Google has purged it
+      // entirely, so there is nothing left to bring back.
+      if (outcome === 'restored') {
+        console.info('[gcal] restored a deleted calendar entry on edit:', title)
+      } else if (outcome === 'missing') {
         calendarWarning =
           'The event was updated, but it no longer has a live entry on the Google Calendar, so the changes are not showing there. Add it to the calendar by hand.'
       }
