@@ -95,17 +95,23 @@ export async function deleteCalendarEvent(eventId: string): Promise<void> {
  * would be wiped. Patch merges, which is the only correct verb for an edit that
  * knows about four fields and nothing else.
  *
- * Returns 'missing' rather than throwing when the entry is gone. The caller has
- * to report that as a warning but must not treat it as a failed edit — the
- * database row is already updated by the time this runs. Anything else throws
- * and the caller decides.
+ * A deleted entry is not 404 here: a delete — whether from this app or by hand
+ * in Google Calendar — only marks it `status: 'cancelled'`, and Google happily
+ * accepts a patch against it, returning 200 with the new times applied to an
+ * entry that no listing will ever show. Trusting the 200 would report success
+ * for an edit nobody can see, so the response status is checked.
  *
- * 'Gone' covers three cases, and the third is the one that bites. A deleted
- * entry is not 404 here: events.delete only marks it `status: 'cancelled'`, and
- * Google happily accepts a patch against it, returning 200 with the new times
- * applied to an entry that no listing will ever show. Verified against the live
- * calendar. Trusting the 200 would report success for an edit nobody can see,
- * so the response status is checked rather than just the HTTP code.
+ * A cancelled entry is brought back by patching its status to 'confirmed',
+ * which keeps its id, so the row's google_event_id stays valid. Verified
+ * against the live calendar. This only runs when the entry was cancelled — a
+ * live entry is never touched beyond the four fields above. Entries deleted
+ * by hand are the reason: an officer's edit shouldn't be lost because someone
+ * cleaned up the shared calendar.
+ *
+ * Returns 'missing' only when Google no longer has the entry at all (404/410,
+ * e.g. purged from the calendar's trash). The caller reports that as a warning
+ * but must not treat it as a failed edit — the database row is already updated
+ * by the time this runs. Anything else throws and the caller decides.
  */
 export async function patchCalendarEvent(
   eventId: string,
@@ -116,7 +122,7 @@ export async function patchCalendarEvent(
     calendarEnd: string
     location: string | null
   }
-): Promise<'patched' | 'missing'> {
+): Promise<'patched' | 'restored' | 'missing'> {
   try {
     const res = await calendar.events.patch({
       calendarId: CALENDAR_ID,
@@ -130,7 +136,14 @@ export async function patchCalendarEvent(
         location: input.location ?? '',
       },
     })
-    return res.data.status === 'cancelled' ? 'missing' : 'patched'
+    if (res.data.status !== 'cancelled') return 'patched'
+
+    await calendar.events.patch({
+      calendarId: CALENDAR_ID,
+      eventId,
+      requestBody: { status: 'confirmed' },
+    })
+    return 'restored'
   } catch (err) {
     const status =
       (err as { code?: number })?.code ??
