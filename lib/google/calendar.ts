@@ -109,9 +109,10 @@ export async function deleteCalendarEvent(eventId: string): Promise<void> {
  * cleaned up the shared calendar.
  *
  * Returns 'missing' only when Google no longer has the entry at all (404/410,
- * e.g. purged from the calendar's trash). The caller reports that as a warning
- * but must not treat it as a failed edit — the database row is already updated
- * by the time this runs. Anything else throws and the caller decides.
+ * e.g. purged from the calendar's trash). The caller inserts a fresh entry and
+ * relinks the row; it must not treat this as a failed edit — the database row
+ * is already updated by the time this runs. Anything else throws and the caller
+ * decides.
  */
 export async function patchCalendarEvent(
   eventId: string,
