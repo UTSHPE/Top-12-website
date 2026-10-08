@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { FaPen, FaUserGroup } from 'react-icons/fa6'
+import { FaCar, FaPen, FaUserGroup } from 'react-icons/fa6'
 import { committeeLabel, getAllEventsWithAttendance, isUpcoming } from '@/lib/events'
 import { formatDateLong, formatPoints } from '@/lib/format'
 import AdminTopbar, { NewEventButton } from '@/app/admin/AdminTopbar'
@@ -74,24 +74,42 @@ export default async function OfficerAnalyticsPage() {
                     <span className="text-muted">{formatDateLong(event.start)}</span>
                     {/* The headcount is the natural handle for "who was
                         there", so it doubles as the link to the raffle list. */}
-                    <span>
+                    <span className="flex flex-col">
                       <Link
                         href={`/admin/events/${event.id}/sign-ins`}
                         className="font-extrabold text-primary underline-offset-4 hover:underline"
                       >
                         {event.headcount}
                       </Link>
+                      {/* Counted apart from the headcount — a driver who
+                          stayed is already in the number above. */}
+                      {event.driver && (
+                        <span className="text-xs text-faint">
+                          {event.driverCount} driver{event.driverCount === 1 ? '' : 's'}
+                        </span>
+                      )}
                     </span>
                     <span className="text-muted">
                       {formatPoints(event.pointsAwarded)} pts
                     </span>
                     <span className="text-muted">{event.multiplier.toFixed(1)}×</span>
-                    <span
-                      className={`font-mono font-bold tracking-[.1em] ${
-                        event.isOpen ? 'text-secondary' : 'text-[#A99E8F]'
-                      }`}
-                    >
-                      {event.accessCode}
+                    <span className="flex flex-col">
+                      <span
+                        className={`font-mono font-bold tracking-[.1em] ${
+                          event.isOpen ? 'text-secondary' : 'text-[#A99E8F]'
+                        }`}
+                      >
+                        {event.accessCode}
+                      </span>
+                      {event.driver && (
+                        <span
+                          title={`Driver code · ${formatPoints(event.driver.points)} pts`}
+                          className="flex items-center gap-1 font-mono text-xs font-bold tracking-[.1em] text-[#A99E8F]"
+                        >
+                          <FaCar aria-label="Driver code" className="size-3 flex-none" />
+                          {event.driver.accessCode}
+                        </span>
+                      )}
                     </span>
                     {/* Editable on every row, past ones included — see
                         RtcToggle for why this isn't behind the edit form. */}

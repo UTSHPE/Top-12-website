@@ -50,6 +50,9 @@ Added by migrations in this repo (not yet applied unless you ran them):
 | --- | --- | --- |
 | `is_open` | `003` | Manual kill switch for check-in. `true` by default. |
 | `deleted_at` | `004` | Soft delete. `null` = live. |
+| `driver_access_code` | `011` | Optional second code for drivers. Partial unique index; shares the check-in window and `is_open`. Officer-only, never mirrored to Google. |
+| `driver_base_points` | `011` | Driver points = `driver_base_points × driver_multiplier`, earned on top of attendance. |
+| `driver_multiplier` | `011` | A CHECK keeps the three driver columns all-null or all-set. |
 
 Confirmed **absent** before migrations: `is_open`, `checkin_closes_at`,
 `deleted_at`, and any Google Calendar id column. The calendar integration is
@@ -94,6 +97,7 @@ Added by migrations in this repo:
 | Column | Migration | Notes |
 | --- | --- | --- |
 | `deleted_at` | `004` | Stamped when the parent event is soft-deleted. |
+| `role` | `011` | `'attendee'` (default, all pre-011 rows) or `'driver'`. The unique index is `(event_id, eid, role)`, so a driver who also attends holds two rows. |
 
 **On `sign_ins.eid`:** there IS a foreign key, `sign_ins_eid_fkey`, pointing at
 `members.eid`. **Verified 2026-08-28** by attempting a `service_role` insert

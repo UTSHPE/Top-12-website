@@ -117,3 +117,53 @@ export function DateField({
     </div>
   )
 }
+
+/**
+ * Base points and multiplier for driver sign-in. Same inputs as the event's own
+ * points on the create form, so the two read as the same kind of number.
+ */
+export function DriverPointsFields({
+  basePoints,
+  multiplier,
+  onBasePoints,
+  onMultiplier,
+}: {
+  basePoints: number
+  multiplier: number
+  onBasePoints: (next: number) => void
+  onMultiplier: (next: number) => void
+}) {
+  return (
+    <div className="grid gap-3.5 sm:grid-cols-2">
+      <div>
+        <label className={LABEL} htmlFor="driverBasePoints">
+          Driver base points
+        </label>
+        <input
+          id="driverBasePoints"
+          type="number"
+          min={1}
+          value={basePoints}
+          onChange={(e) => onBasePoints(Number(e.target.value))}
+          required
+          className={INPUT}
+        />
+      </div>
+      <div>
+        <label className={LABEL} htmlFor="driverMultiplier">
+          Driver multiplier
+        </label>
+        <input
+          id="driverMultiplier"
+          type="number"
+          min={0.1}
+          step={0.1}
+          value={multiplier}
+          onChange={(e) => onMultiplier(Number(e.target.value))}
+          required
+          className={INPUT}
+        />
+      </div>
+    </div>
+  )
+}

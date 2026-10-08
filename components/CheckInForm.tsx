@@ -8,6 +8,8 @@ import { CODE_LENGTH, keepCodeChars } from '@/lib/accessCodeFormat'
 
 type Success = {
   duplicate: boolean
+  /** Which code was used — a driver code earns separate, stacking points. */
+  role: 'attendee' | 'driver'
   eventName: string
   points: number
   rank: number | null
@@ -190,6 +192,8 @@ export default function CheckInForm({ initialCode = '' }: { initialCode?: string
 }
 
 function SuccessCard({ result }: { result: Success }) {
+  const driver = result.role === 'driver'
+
   return (
     <div className="rounded-lg bg-surface p-8 text-center shadow-card">
       <div className="mx-auto mb-5 flex size-[68px] animate-popcheck items-center justify-center rounded-full bg-success-bg">
@@ -197,11 +201,21 @@ function SuccessCard({ result }: { result: Success }) {
       </div>
 
       <h1 className="font-display text-[26px] leading-tight font-extrabold tracking-[-.5px]">
-        {result.duplicate ? "You're already checked in!" : "You're checked in!"}
+        {result.duplicate
+          ? driver
+            ? "You're already checked in as a driver!"
+            : "You're already checked in!"
+          : driver
+            ? 'Thanks for driving!'
+            : "You're checked in!"}
       </h1>
 
       <p className="mt-2 text-[15px] text-body">
-        {result.duplicate ? 'Already counted for ' : 'Checked in to '}
+        {result.duplicate
+          ? 'Already counted for '
+          : driver
+            ? 'Driver check-in for '
+            : 'Checked in to '}
         <b className="text-ink">{result.eventName}</b>
       </p>
 
@@ -209,6 +223,14 @@ function SuccessCard({ result }: { result: Success }) {
         <p className="mt-4 font-display text-[32px] font-extrabold text-success">
           +{formatPoints(result.points)}
           <span className="ml-1.5 text-base font-bold">pts</span>
+        </p>
+      )}
+
+      {/* Driver points stack with attendance — a driver who skips the
+          room's code leaves those points on the table. */}
+      {driver && (
+        <p className="mt-1 text-sm text-muted">
+          Staying for the event? Check in with the code on the slide too.
         </p>
       )}
 

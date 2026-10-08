@@ -80,12 +80,17 @@ export async function POST(request: NextRequest) {
   const response = NextResponse.json({
     ok: true,
     duplicate: result.duplicate,
+    role: result.role,
     eventName: result.eventName,
     points: result.points,
     rank: result.rank,
     message: result.duplicate
-      ? checkInErrorMessage('already_signed_in')
-      : `Checked in to ${result.eventName}`,
+      ? result.role === 'driver'
+        ? "You're already checked in as a driver!"
+        : checkInErrorMessage('already_signed_in')
+      : result.role === 'driver'
+        ? `Driver check-in for ${result.eventName}`
+        : `Checked in to ${result.eventName}`,
   })
 
   // This cookie is the only way the app ever learns who a visitor is — it is

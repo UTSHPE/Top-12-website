@@ -106,11 +106,6 @@ export async function getRtcReport(range: RtcRange): Promise<RtcReport> {
         .lt('calendar_start', toIso),
     ])
 
-  // 42703 is a column that doesn't exist, which here means a migration hasn't
-  // been run. Named explicitly because the empty table it would otherwise
-  // produce is indistinguishable from a real, correct empty result.
-  const error = describeReadFailure(memberError) ?? describeReadFailure(eventError)
-
   const members = memberRows ?? []
   const events = eventRows ?? []
   const eventById = new Map(events.map((e) => [e.id, e]))
@@ -118,23 +113,36 @@ export async function getRtcReport(range: RtcRange): Promise<RtcReport> {
   // Skip the third round trip when there is nothing to match against. Without
   // this, an empty `.in()` list is an easy way to accidentally select the whole
   // table.
-  const signIns =
+  const { data: signIns, error: signInError } =
     events.length === 0 || members.length === 0
-      ? []
-      : (
-          await fetchAll((from, to) =>
-            supabase
-              .from('sign_ins')
-              .select('eid, event_id')
-              .is('deleted_at', null)
-              .in(
-                'event_id',
-                events.map((e) => e.id)
-              )
-              .order('id')
-              .range(from, to)
-          )
-        ).data
+      ? { data: [], error: null }
+      : await fetchAll((from, to) =>
+          supabase
+            .from('sign_ins')
+            .select('eid, event_id')
+            // Attendance only. A driver sign-in is not attending, and a
+            // driver who stayed already has an attendee row — counting both
+            // would put one event on their RTC tally twice.
+            .eq('role', 'attendee')
+            .is('deleted_at', null)
+            .in(
+              'event_id',
+              events.map((e) => e.id)
+            )
+            .order('id')
+            .range(from, to)
+        )
+
+  // 42703 is a column that doesn't exist, which here means a migration hasn't
+  // been run. Named explicitly because the empty table it would otherwise
+  // produce is indistinguishable from a real, correct empty result.
+  //
+  // Includes the sign-in read: with `role` filtered on, a database missing
+  // migration 011 would otherwise report everyone at zero.
+  const error =
+    describeReadFailure(memberError) ??
+    describeReadFailure(eventError) ??
+    describeReadFailure(signInError)
 
   // Keyed on the EID exactly as stored. `sign_ins.eid` is a foreign key to
   // `members.eid` (verified — see docs/SCHEMA.md), so both sides already hold
@@ -175,7 +183,7 @@ export async function getRtcReport(range: RtcRange): Promise<RtcReport> {
 function describeReadFailure(error: { code?: string; message: string } | null): string | null {
   if (!error) return null
   if (error.code === '42703') {
-    return 'A column this report needs is missing from the database — migrations 007 and 008 in docs/migrations/ have not both been applied yet. Counts below are not trustworthy until they are.'
+    return 'A column this report needs is missing from the database — migrations 007, 008, and 011 in docs/migrations/ have not all been applied yet. Counts below are not trustworthy until they are.'
   }
   return `The attendance data could not be read (${error.message}). The counts below are incomplete.`
 }

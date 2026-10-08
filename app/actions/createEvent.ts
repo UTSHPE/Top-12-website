@@ -28,7 +28,17 @@ export async function createEvent(input: {
    * is stamped onto each week's row below, not onto the recurrence group.
    */
   isRtc: boolean
-}): Promise<{ codes: string[]; calendarWarnings: string[] }> {
+  /**
+   * Optional driver sign-in: a second code per occurrence, earning these points
+   * on top of attendance. Shares the check-in window and `is_open`.
+   */
+  driver?: { basePoints: number; multiplier: number }
+}): Promise<{
+  codes: string[]
+  /** Parallel to `codes` — the driver code for each occurrence, or null. */
+  driverCodes: (string | null)[]
+  calendarWarnings: string[]
+}> {
   // Authorize: server actions POST to their host route, so the /admin/* proxy
   // wall covers this — but verify the session here too rather than relying on
   // the proxy alone (per Next.js data-security guidance).
@@ -62,24 +72,48 @@ export async function createEvent(input: {
     throw new Error('Choose a different committee for the joint host.')
   }
 
+  // Same reasoning as the committees: the form gates these, the action cannot
+  // trust that it did. A NaN here would be stored and award NaN points.
+  const driver = input.driver ?? null
+  if (
+    driver &&
+    !(
+      Number.isFinite(driver.basePoints) &&
+      driver.basePoints > 0 &&
+      Number.isFinite(driver.multiplier) &&
+      driver.multiplier > 0
+    )
+  ) {
+    throw new Error('Driver points and multiplier have to be positive numbers.')
+  }
+
   const recurrence_group_id = input.isRecurring ? crypto.randomUUID() : null
 
-  const rows = Array.from({ length: input.weekCount }, (_, i) => ({
-    title: input.title,
-    location: input.location,
-    event_type: primaryCommittee,
-    secondary_event_type: secondaryCommittee,
-    created_by_officer: input.createdByOfficer,
-    calendar_start: new Date(input.calendarStart.getTime() + i * WEEK_MS).toISOString(),
-    calendar_end: new Date(input.calendarEnd.getTime() + i * WEEK_MS).toISOString(),
-    check_in_start: new Date(input.checkInStart.getTime() + i * WEEK_MS).toISOString(),
-    check_in_end: new Date(input.checkInEnd.getTime() + i * WEEK_MS).toISOString(),
-    base_points: input.basePoints,
-    multiplier: input.multiplier,
-    access_code: generateAccessCode(),
-    recurrence_group_id,
-    is_rtc: input.isRtc,
-  }))
+  const rows = Array.from({ length: input.weekCount }, (_, i) => {
+    const access_code = generateAccessCode()
+    return {
+      title: input.title,
+      location: input.location,
+      event_type: primaryCommittee,
+      secondary_event_type: secondaryCommittee,
+      created_by_officer: input.createdByOfficer,
+      calendar_start: new Date(input.calendarStart.getTime() + i * WEEK_MS).toISOString(),
+      calendar_end: new Date(input.calendarEnd.getTime() + i * WEEK_MS).toISOString(),
+      check_in_start: new Date(input.checkInStart.getTime() + i * WEEK_MS).toISOString(),
+      check_in_end: new Date(input.checkInEnd.getTime() + i * WEEK_MS).toISOString(),
+      base_points: input.basePoints,
+      multiplier: input.multiplier,
+      access_code,
+      // Its own code per occurrence, like access_code. Regenerated on the off
+      // chance it equals this row's attendee code — check-in tells the two apart
+      // by which column matched, so they must differ.
+      driver_access_code: driver ? distinctCode(access_code) : null,
+      driver_base_points: driver?.basePoints ?? null,
+      driver_multiplier: driver?.multiplier ?? null,
+      recurrence_group_id,
+      is_rtc: input.isRtc,
+    }
+  })
 
   // `.select()` so each new row's id comes back — the Calendar loop below needs
   // it to record which calendar entry belongs to which event.
@@ -104,6 +138,8 @@ export async function createEvent(input: {
   const calendarWarnings: string[] = []
 
   const inserts = await Promise.allSettled(
+    // The driver code is deliberately absent: one calendar entry per event, and
+    // only title, window, and location ever leave the database.
     rows.map((row) =>
       insertCalendarEvent({
         title: row.title,
@@ -201,5 +237,15 @@ export async function createEvent(input: {
   // Hand the codes back so the officer can put the first one on a slide right
   // away — that hand-off is the whole point of the create flow. The warnings
   // ride along so a partial success is never presented as a clean one.
-  return { codes: rows.map((row) => row.access_code), calendarWarnings: uniqueWarnings }
+  return {
+    codes: rows.map((row) => row.access_code),
+    driverCodes: rows.map((row) => row.driver_access_code),
+    calendarWarnings: uniqueWarnings,
+  }
+}
+
+function distinctCode(other: string): string {
+  let code = generateAccessCode()
+  while (code === other) code = generateAccessCode()
+  return code
 }

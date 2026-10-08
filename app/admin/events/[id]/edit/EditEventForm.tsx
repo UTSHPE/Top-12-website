@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
+  FaCar,
   FaLock,
   FaLocationDot,
   FaRegCircleDot,
@@ -12,10 +13,18 @@ import {
   FaTriangleExclamation,
 } from 'react-icons/fa6'
 import { updateEvent } from '@/app/actions/updateEvent'
-import { toLocalInputValue, fromLocalInputValue } from '@/lib/format'
+import { toLocalInputValue, fromLocalInputValue, formatPoints } from '@/lib/format'
 import type { EditableEvent } from '@/lib/events'
 import ErrorStrip from '@/components/ErrorStrip'
-import { INPUT, LABEL, Panel, DateField, CheckboxField } from '@/components/EventFormFields'
+import {
+  INPUT,
+  LABEL,
+  Panel,
+  DateField,
+  CheckboxField,
+  DriverPointsFields,
+} from '@/components/EventFormFields'
+import DriverCode from '@/components/DriverCode'
 
 /**
  * Edit the title, timing, and location of an event that hasn't started.
@@ -39,6 +48,11 @@ export default function EditEventForm({ event }: { event: EditableEvent }) {
   const [isRtc, setIsRtc] = useState(event.isRtc)
   const [title, setTitle] = useState(event.title)
   const [location, setLocation] = useState(event.location)
+  // Only meaningful while the event has no driver code. Once it has one, the
+  // code and its points are fixed and shown read-only instead.
+  const [addDriver, setAddDriver] = useState(false)
+  const [driverBasePoints, setDriverBasePoints] = useState(1)
+  const [driverMultiplier, setDriverMultiplier] = useState(1.0)
 
   const [submitting, setSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
@@ -99,6 +113,10 @@ export default function EditEventForm({ event }: { event: EditableEvent }) {
         isOpen,
         isRtc,
         location,
+        addDriver:
+          addDriver && !event.driver
+            ? { basePoints: driverBasePoints, multiplier: driverMultiplier }
+            : undefined,
       })
 
       // The row is saved either way. If the calendar didn't follow, hold the
@@ -158,7 +176,8 @@ export default function EditEventForm({ event }: { event: EditableEvent }) {
             {event.title}
           </h1>
           <p className="text-sm text-faint">
-            Only the title, timing, location, and RTC status can be changed.
+            Only the title, timing, location, RTC status, and adding driver sign-in can be
+            changed.
           </p>
         </div>
 
@@ -215,6 +234,43 @@ export default function EditEventForm({ event }: { event: EditableEvent }) {
               checked={isRtc}
               onChange={setIsRtc}
             />
+          </Panel>
+
+          {/* Can be switched on late, but never changed or removed: once the
+              code exists it may already be in a group chat. */}
+          <Panel eyebrow="Driver sign-in" color="var(--color-secondary)" Icon={FaCar}>
+            {event.driver ? (
+              <div className="flex flex-col items-center gap-3 rounded-md bg-surface px-4 py-5">
+                <DriverCode code={event.driver.accessCode} />
+                <p className="flex items-center gap-1.5 text-[13px] text-muted">
+                  <FaLock aria-hidden className="size-3 text-faint" />
+                  Drivers earn{' '}
+                  <b className="font-bold text-ink">
+                    {formatPoints(event.driver.points)} pts
+                  </b>{' '}
+                  ({event.driver.basePoints} × {event.driver.multiplier.toFixed(1)}) on top of
+                  attendance.
+                </p>
+              </div>
+            ) : (
+              <>
+                <CheckboxField
+                  id="addDriver"
+                  label="Add a separate code for drivers"
+                  hint="Drivers enter a second code and earn these points on top of attendance. Can't be changed once saved."
+                  checked={addDriver}
+                  onChange={setAddDriver}
+                />
+                {addDriver && (
+                  <DriverPointsFields
+                    basePoints={driverBasePoints}
+                    multiplier={driverMultiplier}
+                    onBasePoints={setDriverBasePoints}
+                    onMultiplier={setDriverMultiplier}
+                  />
+                )}
+              </>
+            )}
           </Panel>
 
           {event.headcount > 0 && (

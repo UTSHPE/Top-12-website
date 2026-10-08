@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+import { generateAccessCode } from '@/lib/accessCode'
 
 export type UpdateEventResult = {
   /**
@@ -48,6 +49,13 @@ export async function updateEvent(input: {
    */
   isRtc: boolean
   location: string
+  /**
+   * Turn on driver sign-in for an event that doesn't have it yet. Ignored once
+   * a driver code exists — from then on the code and its points are as fixed
+   * as the attendee code, for the same reason: it may already be in a group
+   * chat.
+   */
+  addDriver?: { basePoints: number; multiplier: number }
 }): Promise<UpdateEventResult> {
   // Same belt-and-braces authorization as createEvent and deleteEvent: the
   // /admin proxy wall covers this, but a server action is a public endpoint.
@@ -61,7 +69,7 @@ export async function updateEvent(input: {
 
   const { data: event, error: lookupError } = await supabase
     .from('events')
-    .select('id, title, calendar_start, google_event_id')
+    .select('id, title, calendar_start, google_event_id, access_code, driver_access_code')
     .eq('id', input.eventId)
     .is('deleted_at', null)
     .maybeSingle()
@@ -116,6 +124,19 @@ export async function updateEvent(input: {
   }
   const location = input.location.trim() || null
 
+  const addDriver = input.addDriver ?? null
+  if (
+    addDriver &&
+    !(
+      Number.isFinite(addDriver.basePoints) &&
+      addDriver.basePoints > 0 &&
+      Number.isFinite(addDriver.multiplier) &&
+      addDriver.multiplier > 0
+    )
+  ) {
+    throw new Error('Driver points and multiplier have to be positive numbers.')
+  }
+
   const { error: updateError } = await supabase
     .from('events')
     .update({
@@ -131,6 +152,29 @@ export async function updateEvent(input: {
     .eq('id', input.eventId)
 
   if (updateError) throw new Error(updateError.message)
+
+  // Driver sign-in, added at most once. Re-checked against the stored row
+  // rather than trusting the form, and written with an `is null` guard so two
+  // officers saving at once can't each mint a different code — the second
+  // write simply matches nothing.
+  //
+  // Nothing here touches Google: the driver code never goes on the calendar.
+  if (addDriver && !event.driver_access_code) {
+    let driverCode = generateAccessCode()
+    while (driverCode === event.access_code) driverCode = generateAccessCode()
+
+    const { error: driverError } = await supabase
+      .from('events')
+      .update({
+        driver_access_code: driverCode,
+        driver_base_points: addDriver.basePoints,
+        driver_multiplier: addDriver.multiplier,
+      })
+      .eq('id', input.eventId)
+      .is('driver_access_code', null)
+
+    if (driverError) throw new Error(driverError.message)
+  }
 
   // Only now, with the row already committed, mirror onto the chapter calendar.
   // Only the title, calendar window, and location go to Google — the check-in window

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import {
+  FaCar,
   FaCheck,
   FaRegCircleDot,
   FaRegClock,
@@ -15,7 +16,15 @@ import { EVENT_TYPES } from '@/lib/events'
 import CodeDisplay from '@/components/CodeDisplay'
 import PresentCodeButton from '@/components/PresentCodeButton'
 import ErrorStrip from '@/components/ErrorStrip'
-import { INPUT, LABEL, Panel, DateField, CheckboxField } from '@/components/EventFormFields'
+import {
+  INPUT,
+  LABEL,
+  Panel,
+  DateField,
+  CheckboxField,
+  DriverPointsFields,
+} from '@/components/EventFormFields'
+import DriverCode from '@/components/DriverCode'
 
 export default function CreateEventForm({ officerName }: { officerName: string }) {
   const [title, setTitle] = useState('')
@@ -32,9 +41,13 @@ export default function CreateEventForm({ officerName }: { officerName: string }
   const [multiplier, setMultiplier] = useState(1.0)
   const [isRecurring, setIsRecurring] = useState(false)
   const [weekCount, setWeekCount] = useState(2)
+  const [hasDriver, setHasDriver] = useState(false)
+  const [driverBasePoints, setDriverBasePoints] = useState(1)
+  const [driverMultiplier, setDriverMultiplier] = useState(1.0)
 
   const [submitting, setSubmitting] = useState(false)
   const [codes, setCodes] = useState<string[] | null>(null)
+  const [driverCodes, setDriverCodes] = useState<(string | null)[]>([])
   const [calendarWarnings, setCalendarWarnings] = useState<string[]>([])
   const [errorMsg, setErrorMsg] = useState('')
 
@@ -44,7 +57,7 @@ export default function CreateEventForm({ officerName }: { officerName: string }
     setErrorMsg('')
 
     try {
-      const { codes, calendarWarnings } = await createEvent({
+      const { codes, driverCodes, calendarWarnings } = await createEvent({
         title,
         location,
         eventType,
@@ -59,8 +72,12 @@ export default function CreateEventForm({ officerName }: { officerName: string }
         isRecurring,
         weekCount: isRecurring ? weekCount : 1,
         isRtc,
+        driver: hasDriver
+          ? { basePoints: driverBasePoints, multiplier: driverMultiplier }
+          : undefined,
       })
       setCalendarWarnings(calendarWarnings)
+      setDriverCodes(driverCodes)
       setCodes(codes)
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Failed to create event.')
@@ -73,6 +90,7 @@ export default function CreateEventForm({ officerName }: { officerName: string }
     return (
       <CodeGenerated
         codes={codes}
+        driverCode={driverCodes[0] ?? null}
         eventTitle={title}
         calendarWarnings={calendarWarnings}
       />
@@ -314,6 +332,28 @@ export default function CreateEventForm({ officerName }: { officerName: string }
             </div>
           </Panel>
 
+          <Panel eyebrow="Driver sign-in" color="var(--color-secondary)" Icon={FaCar}>
+            <CheckboxField
+              id="hasDriver"
+              label="Separate code for drivers"
+              hint={
+                isRecurring
+                  ? `Each of the ${weekCount} events gets its own driver code. Driver points stack with attendance.`
+                  : 'Drivers enter a second code and earn these points on top of attendance.'
+              }
+              checked={hasDriver}
+              onChange={setHasDriver}
+            />
+            {hasDriver && (
+              <DriverPointsFields
+                basePoints={driverBasePoints}
+                multiplier={driverMultiplier}
+                onBasePoints={setDriverBasePoints}
+                onMultiplier={setDriverMultiplier}
+              />
+            )}
+          </Panel>
+
           {errorMsg && <ErrorStrip title="Couldn't create that." detail={errorMsg} />}
 
           <div className="flex justify-end gap-3">
@@ -347,10 +387,12 @@ export default function CreateEventForm({ officerName }: { officerName: string }
  */
 function CodeGenerated({
   codes,
+  driverCode,
   eventTitle,
   calendarWarnings,
 }: {
   codes: string[]
+  driverCode: string | null
   eventTitle: string
   calendarWarnings: string[]
 }) {
@@ -420,6 +462,17 @@ function CodeGenerated({
             </button>
             <PresentCodeButton code={code} eventTitle={eventTitle} />
           </div>
+
+          {driverCode && (
+            <div className="mt-6 border-t border-white/10 pt-5">
+              <DriverCode code={driverCode} tone="dark" />
+              {codes.length > 1 && (
+                <p className="mt-2 text-[12px] text-[#A99E8F]">
+                  This is week one&apos;s. Each week has its own, on the events table.
+                </p>
+              )}
+            </div>
+          )}
 
           <Link
             href="/admin/create-event"

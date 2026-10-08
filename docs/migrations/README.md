@@ -19,6 +19,7 @@ re-running one is harmless.
 | 008 | `008_members_stipend_eligible.sql` | Adds `members.stipend_eligible` | **Yes** |
 | 009 | `009_important_links.sql` | Creates `important_links` (RLS on, no policy) | **Yes** |
 | 010 | `010_important_links_t12.sql` | Allows `'T12'` (whole officer team) as a link committee | **Yes** |
+| 011 | `011_driver_sign_in.sql` | Driver access code + points on `events`; `sign_ins.role`; unique index becomes `(event_id, eid, role)` | **Yes** |
 
 ## ⚠️ 001, 003, and 004 must be applied before the app will work
 

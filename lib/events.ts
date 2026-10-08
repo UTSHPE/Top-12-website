@@ -196,6 +196,44 @@ type EventRow = {
 const EVENT_COLUMNS =
   'id, title, location, event_type, secondary_event_type, created_by_officer, access_code, calendar_start, calendar_end, check_in_start, check_in_end, base_points, multiplier, is_open, is_rtc'
 
+/**
+ * The driver code is officer-only. It lives in its own column list so it can
+ * never ride along on EVENT_COLUMNS into a member page: anyone holding it can
+ * claim driver points.
+ */
+const OFFICER_EVENT_COLUMNS = `${EVENT_COLUMNS}, driver_access_code, driver_base_points, driver_multiplier`
+
+type OfficerEventRow = EventRow & {
+  driver_access_code: string | null
+  driver_base_points: number | null
+  driver_multiplier: number | null
+}
+
+/** An event's driver sign-in, when it has one. */
+export type DriverSignIn = {
+  accessCode: string
+  basePoints: number
+  multiplier: number
+  /** What a driver earns, on top of attendance. */
+  points: number
+}
+
+function toDriverSignIn(row: {
+  driver_access_code: string | null
+  driver_base_points: number | null
+  driver_multiplier: number | null
+}): DriverSignIn | null {
+  if (!row.driver_access_code) return null
+  const basePoints = Number(row.driver_base_points)
+  const multiplier = Number(row.driver_multiplier)
+  return {
+    accessCode: row.driver_access_code,
+    basePoints,
+    multiplier,
+    points: basePoints * multiplier,
+  }
+}
+
 function toChapterEvent(row: EventRow, now: number): ChapterEvent {
   return {
     id: row.id,
@@ -269,8 +307,13 @@ export async function getOpenEvent(): Promise<ChapterEvent | null> {
 }
 
 export type EventWithAttendance = ChapterEvent & {
+  /** Attendee check-ins only — a driver who also attends is counted once. */
   headcount: number
+  /** Driver check-ins, counted separately from the headcount. */
+  driverCount: number
+  /** Attendee and driver points together — everything this event put on the board. */
   pointsAwarded: number
+  driver: DriverSignIn | null
 }
 
 export type DashboardStats = {
@@ -294,13 +337,13 @@ export async function getDashboardStats(recentLimit = 8): Promise<DashboardStats
   const [{ data: eventRows }, { data: signIns }] = await Promise.all([
     supabase
       .from('events')
-      .select(EVENT_COLUMNS)
+      .select(OFFICER_EVENT_COLUMNS)
       .is('deleted_at', null)
       .order('calendar_start', { ascending: false }),
     fetchAll((from, to) =>
       supabase
         .from('sign_ins')
-        .select('event_id, points_earned')
+        .select('event_id, points_earned, role')
         .is('deleted_at', null)
         .order('id')
         .range(from, to)
@@ -308,19 +351,30 @@ export async function getDashboardStats(recentLimit = 8): Promise<DashboardStats
   ])
 
   const headcounts = new Map<string, number>()
+  const driverCounts = new Map<string, number>()
   const pointsByEvent = new Map<string, number>()
+  let attendeeCheckIns = 0
   for (const row of signIns ?? []) {
-    headcounts.set(row.event_id, (headcounts.get(row.event_id) ?? 0) + 1)
+    // Headcount means people in the room. A driver row is the same person as
+    // their attendee row (if they stayed), so it is tallied apart.
+    if (row.role === 'driver') {
+      driverCounts.set(row.event_id, (driverCounts.get(row.event_id) ?? 0) + 1)
+    } else {
+      headcounts.set(row.event_id, (headcounts.get(row.event_id) ?? 0) + 1)
+      attendeeCheckIns++
+    }
     pointsByEvent.set(
       row.event_id,
       (pointsByEvent.get(row.event_id) ?? 0) + Number(row.points_earned)
     )
   }
 
-  const events: EventWithAttendance[] = ((eventRows ?? []) as EventRow[]).map((row) => ({
+  const events: EventWithAttendance[] = ((eventRows ?? []) as OfficerEventRow[]).map((row) => ({
     ...toChapterEvent(row, now.getTime()),
     headcount: headcounts.get(row.id) ?? 0,
+    driverCount: driverCounts.get(row.id) ?? 0,
     pointsAwarded: pointsByEvent.get(row.id) ?? 0,
+    driver: toDriverSignIn(row),
   }))
 
   const generalMeetings = events.filter((e) => e.eventType === 'General Meeting')
@@ -333,7 +387,7 @@ export async function getDashboardStats(recentLimit = 8): Promise<DashboardStats
   const live = events.find((e) => e.isOpen) ?? null
 
   return {
-    totalCheckIns: signIns?.length ?? 0,
+    totalCheckIns: attendeeCheckIns,
     pointsGiven: [...pointsByEvent.values()].reduce((sum, n) => sum + n, 0),
     eventsRun: events.length,
     avgGeneralMeetingAttendance,
@@ -370,6 +424,8 @@ export type EditableEvent = {
   /** Counts toward RTC. Editable here AND from the events table — see below. */
   isRtc: boolean
   accessCode: string
+  /** Null until driver sign-in is turned on; fixed once it is. */
+  driver: DriverSignIn | null
   committee: string
   /** Live check-ins already recorded — the edit form warns before touching them. */
   headcount: number
@@ -391,7 +447,7 @@ export async function getEventForEdit(eventId: string): Promise<EditableEvent | 
     supabase
       .from('events')
       .select(
-        'id, title, location, event_type, secondary_event_type, access_code, calendar_start, calendar_end, check_in_start, check_in_end, is_open, is_rtc'
+        'id, title, location, event_type, secondary_event_type, access_code, calendar_start, calendar_end, check_in_start, check_in_end, is_open, is_rtc, driver_access_code, driver_base_points, driver_multiplier'
       )
       .eq('id', eventId)
       .is('deleted_at', null)
@@ -412,6 +468,7 @@ export async function getEventForEdit(eventId: string): Promise<EditableEvent | 
     checkInEnabled: row.is_open !== false,
     isRtc: row.is_rtc === true,
     accessCode: row.access_code,
+    driver: toDriverSignIn(row),
     committee: committeeLabel({
       eventType: row.event_type ?? 'Other',
       secondaryEventType: row.secondary_event_type || null,
@@ -460,15 +517,23 @@ export async function getEventSignIns(eventId: string): Promise<EventSignIns | n
       .eq('id', eventId)
       .is('deleted_at', null)
       .maybeSingle(),
-    supabase.from('sign_ins').select('eid').eq('event_id', eventId).is('deleted_at', null),
+    // Attendees only. The wheel is for people in the room; a driver who
+    // dropped people off and left has a driver row and nothing else.
+    supabase
+      .from('sign_ins')
+      .select('eid')
+      .eq('event_id', eventId)
+      .eq('role', 'attendee')
+      .is('deleted_at', null),
   ])
 
   if (!row) return null
 
-  // One entry per person, not per row. The unique index on (event_id, eid)
-  // already makes a second row impossible, so this is belt-and-braces — but a
-  // duplicated EID would hand one member two slices of the wheel, which is the
-  // one way this page could quietly rig a raffle.
+  // One entry per person, not per row. The unique index on (event_id, eid,
+  // role) plus the attendee filter above already makes a second row
+  // impossible, so this is belt-and-braces — but a duplicated EID would hand
+  // one member two slices of the wheel, which is the one way this page could
+  // quietly rig a raffle.
   //
   // Deduped on the lowercased EID, since EID case never matters anywhere in
   // this app, while the roster's own spelling is what gets kept — `.in()` below
