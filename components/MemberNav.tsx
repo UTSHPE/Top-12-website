@@ -2,12 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { FaUserShield } from 'react-icons/fa6'
 import Logo from '@/components/Logo'
 
 const LINKS = [
   { href: '/', label: 'Home' },
   { href: '/events', label: 'Events' },
   { href: '/leaderboard', label: 'Leaderboard' },
+  { href: '/stats', label: 'My stats' },
 ]
 
 /**
@@ -22,9 +24,9 @@ const NAV_BUTTON =
   'flex-none rounded-sm bg-primary-bright px-4 py-2.5 font-bold text-white transition-colors hover:bg-primary-hover'
 
 /**
- * The member header. Desktop only for navigation: under `md` it is just the
- * logo, and every link — Officer sign in included, which the old phone row had
- * no room for — lives in MemberTabBar at the bottom of the screen.
+ * The member header. Desktop only for navigation: under `md` it is the logo
+ * plus a quiet Officer sign in link on the right, and every member link lives
+ * in MemberTabBar at the bottom of the screen.
  */
 export default function MemberNav() {
   const pathname = usePathname()
@@ -44,6 +46,17 @@ export default function MemberNav() {
         <span className="hidden sm:block">
           <Logo height={30} />
         </span>
+      </Link>
+
+      {/* Phone: officers only, so it stays a quiet text link rather than a
+          filled button competing with the tab bar's Check in. Same /admin
+          target as the desktop button below. */}
+      <Link
+        href="/admin"
+        className="flex items-center gap-1.5 rounded-sm px-2.5 py-2 text-[13px] font-semibold text-muted transition-colors hover:text-primary md:hidden"
+      >
+        <FaUserShield aria-hidden className="size-3.5" />
+        Officer sign in
       </Link>
 
       <nav className="hidden items-center gap-[26px] text-sm font-medium text-body md:flex">

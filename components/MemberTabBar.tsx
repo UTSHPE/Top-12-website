@@ -4,10 +4,10 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   FaCalendarDay,
+  FaChartSimple,
   FaCircleCheck,
   FaHouse,
   FaRankingStar,
-  FaUserShield,
 } from 'react-icons/fa6'
 import type { IconType } from 'react-icons'
 
@@ -16,9 +16,9 @@ const TABS: { href: string; label: string; Icon: IconType }[] = [
   { href: '/events', label: 'Events', Icon: FaCalendarDay },
   { href: '/checkin', label: 'Check in', Icon: FaCircleCheck },
   { href: '/leaderboard', label: 'Board', Icon: FaRankingStar },
-  // Same target as the desktop "Officer sign in" button: the /admin proxy sends
-  // signed-out visitors to /login and signed-in officers straight through.
-  { href: '/admin', label: 'Officer', Icon: FaUserShield },
+  // Officer sign in lives in the phone header (MemberNav) — members never use
+  // it, so it doesn't earn a tab.
+  { href: '/stats', label: 'Stats', Icon: FaChartSimple },
 ]
 
 /** Prefix match, so /checkin/ABC123 still lights up Check in. Home is exact. */

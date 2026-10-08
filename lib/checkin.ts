@@ -68,6 +68,11 @@ export function normalizeAccessCode(raw: string): string {
  */
 const EID_SAFE = /^[a-z0-9]+$/
 
+/** Safe to hand to an `ilike` roster match? Expects a normalized EID. */
+export function isSafeEid(eid: string): boolean {
+  return EID_SAFE.test(eid)
+}
+
 /**
  * Could this string be an access code at all?
  *
@@ -152,7 +157,7 @@ export async function performCheckIn(input: {
   // if the roster is lowercase too, and it may not be — rows added by hand
   // through the Supabase dashboard keep whatever casing was typed. An exact
   // match would lock those members out of check-in entirely.
-  if (!EID_SAFE.test(eid)) return { success: false, error: 'member_not_found' }
+  if (!isSafeEid(eid)) return { success: false, error: 'member_not_found' }
 
   const { data: member, error: memberError } = await supabase
     .from('members')

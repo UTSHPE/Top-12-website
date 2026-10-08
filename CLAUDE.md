@@ -55,8 +55,10 @@ app/
   events/            # member event browse w/ category filter chips
   leaderboard/       # podium + ranked rows + "you" row
   checkin/           # public member check-in — /checkin and /checkin/[code]
+  stats/             # member stats: EID lookup → points, rank, events attended
   actions/           # 'use server' — checkIn, create/update/deleteEvent, setCheckInOpen, setEventRtc
   api/checkin/       # POST route the check-in form submits to
+  api/stats/         # POST { eid } → member stats (rate-limited, never sets the cookie)
   api/members/sync/  # Google Forms → roster upsert (Apps Script POSTs here, bearer secret)
 components/          # shared UI (see Design system below)
 lib/
@@ -64,6 +66,7 @@ lib/
   checkin.ts         # the check-in decision, shared by the action and the route
   rateLimit.ts       # in-memory per-IP limiter for the check-in endpoint
   leaderboard.ts     # sign-in aggregation and ranking
+  memberStats.ts     # one member's totals + attended events, for /stats
   rtc.ts             # RTC headcount report — deliberately walled off from points
   gm.ts              # GM attendance + contact info, current term, numbered by date
   links.ts           # officer important_links (service-role only)
@@ -148,7 +151,8 @@ illustrations are placeholder art, so real people get the documented fallback.
 - Duplicate check-ins are caught by the **unique index on `(event_id, eid, role)`**, never by a SELECT-then-INSERT — two simultaneous submits would both pass that check. The route catches `23505` and reports it as success.
 - **EID case never matters.** Input is lowercased, and the roster is matched with `ilike` because rows added by hand through the Supabase dashboard keep whatever casing was typed. The *roster's* spelling is then used for the `sign_ins` row, the cookie, and the rank lookup — so one person can't split into two leaderboard rows by capitalizing differently on a later check-in.
 - Deleting an event is a **soft delete**: `deleted_at` is stamped on the event *and* every child `sign_ins` row. Stamping the children matters because `lib/leaderboard.ts` aggregates `sign_ins` alone and never joins `events`. Every read filters `.is('deleted_at', null)`.
-- The member nav's officer button points at `/admin`, not `/login`: the proxy bounces signed-out visitors to the login form and lets signed-in officers straight through.
+- The member nav's officer button points at `/admin`, not `/login`: the proxy bounces signed-out visitors to the login form and lets signed-in officers straight through. On phones it is a text link in the header's top-right; the tab bar's fifth slot is Stats.
+- **Stats lookup is open but throttled.** Any EID can be looked up on `/stats` (the leaderboard is already public), so `app/api/stats/route.ts` charges a per-IP miss budget for EIDs not on the roster. It never sets the EID cookie — looking someone up must not make you "them" on the leaderboard. Totals and rank come from `getLeaderboard()` so the two pages can't disagree.
 - **Google Calendar sync is best-effort and always runs second.** Create/update/delete commit to Supabase first (it's the source of truth for check-in), then mirror to Google. A Google failure comes back as a `calendarWarning(s)` the officer sees and never rolls back the row. Only title, calendar window, and location are mirrored — the check-in window and `is_open` stay internal. `lib/google/calendar.ts` throws at import if its env vars are missing, so `updateEvent`/`deleteEvent` import it **dynamically** inside a try; keep that pattern. Recurring series are inserted in parallel, not sequentially, so a long series finishes inside the serverless time limit. On edit, `patchCalendarEvent` restores an entry deleted by hand, or recreates one Google has purged and repoints `google_event_id`.
 - On edit, an event's committee, points, and **access code are immutable** (the code may already be printed). Past events can't be edited.
 - **RTC is not points.** `lib/rtc.ts` counts `is_rtc` attendance for `stipend_eligible` members, for the VPE's stipend paperwork. It never reads `points_earned`, and the leaderboard never reads `is_rtc`/`stipend_eligible`. Keep them apart, and don't add an eligibility threshold — the VPE interprets the counts. It defaults to the current term (`termBounds` in `lib/format.ts`), not all-time. It counts `role = 'attendee'` rows only.
