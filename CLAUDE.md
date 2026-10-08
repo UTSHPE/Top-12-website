@@ -51,6 +51,7 @@ app/
     events/          # attendance & engagement table; [id]/edit, [id]/sign-ins (raffle list)
     leaderboard/     # chapter board inside the console shell
     rtc/             # RTC attendance report for stipend paperwork
+    gm/              # general meeting attendance, tabbed by number of GMs attended
   events/            # member event browse w/ category filter chips
   leaderboard/       # podium + ranked rows + "you" row
   checkin/           # public member check-in — /checkin and /checkin/[code]
@@ -64,6 +65,7 @@ lib/
   rateLimit.ts       # in-memory per-IP limiter for the check-in endpoint
   leaderboard.ts     # sign-in aggregation and ranking
   rtc.ts             # RTC headcount report — deliberately walled off from points
+  gm.ts              # GM attendance + contact info, current term, numbered by date
   links.ts           # officer important_links (service-role only)
   calendar.ts        # member "Add to Google Calendar" URL — no API involved
   google/calendar.ts # officer-side Calendar API bridge (insert/patch/delete)
