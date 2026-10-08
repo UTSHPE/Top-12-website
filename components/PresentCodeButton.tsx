@@ -50,7 +50,7 @@ export default function PresentCodeButton({
             eventTitle ? `Present the code for ${eventTitle} fullscreen` : 'Present code fullscreen'
           }
           title="Present fullscreen"
-          className="flex size-7 flex-none items-center justify-center rounded-sm text-[#A99E8F] transition-colors hover:bg-primary-bright/10 hover:text-primary-bright"
+          className="flex size-10 flex-none items-center justify-center md:size-7 rounded-sm text-[#A99E8F] transition-colors hover:bg-primary-bright/10 hover:text-primary-bright"
         >
           <FaExpand aria-hidden className="size-3" />
         </button>
@@ -68,7 +68,8 @@ export default function PresentCodeButton({
           </p>
           <CodeDisplay code={code} size="xl" tone="dark" />
           <p className="text-center text-xs text-[#A99E8F]">
-            Click anywhere or press Esc to exit
+            <span className="sm:hidden">Tap anywhere to exit</span>
+            <span className="hidden sm:inline">Click anywhere or press Esc to exit</span>
           </p>
         </div>
       )}

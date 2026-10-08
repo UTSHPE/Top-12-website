@@ -3,6 +3,7 @@ import { EID_COOKIE } from '@/lib/memberSession'
 import { getLeaderboard } from '@/lib/leaderboard'
 import { currentSeason, formatPoints } from '@/lib/format'
 import MemberNav from '@/components/MemberNav'
+import MemberTabBar from '@/components/MemberTabBar'
 import Podium from '@/components/Podium'
 import LeaderboardSearch from '@/components/LeaderboardSearch'
 import { toPublicEntries } from '@/lib/leaderboardSearch'
@@ -34,7 +35,7 @@ export default async function LeaderboardPage() {
     <>
       <MemberNav />
 
-      <main className="flex-1 pb-28 md:pb-8">
+      <main className="flex-1 pb-20 md:pb-8">
         <header className="bg-ink px-5 pt-[26px] pb-[30px] text-white sm:px-[30px]">
           <div className="mx-auto max-w-[720px]">
             <div className="mb-[22px] flex items-center justify-between gap-4">
@@ -64,9 +65,12 @@ export default async function LeaderboardPage() {
         </div>
       </main>
 
-      {/* Phone: your standing stays in view without scrolling for it. */}
+      {/* Phone: your standing stays in view without scrolling for it. Rests
+          on top of the tab bar, which now owns the bottom edge and the iPhone
+          home-indicator inset. The extra bottom padding is the strip the
+          raised Check in button pokes up into, so it never covers the text. */}
       {me && (
-        <div className="fixed inset-x-0 bottom-0 flex items-center gap-3 bg-primary px-[18px] pt-3.5 pb-[22px] text-white md:hidden">
+        <div className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] z-30 flex items-center gap-3 bg-primary px-[18px] pt-3.5 pb-6 text-white md:hidden">
           <div className="font-display w-[26px] text-center text-[15px] font-extrabold">
             {me.rank}
           </div>
@@ -82,6 +86,7 @@ export default async function LeaderboardPage() {
           </div>
         </div>
       )}
+      <MemberTabBar />
     </>
   )
 }

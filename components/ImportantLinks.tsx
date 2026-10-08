@@ -19,8 +19,12 @@ function dotFor(committee: string): string {
   return COMMITTEE_DOT[committee as Committee] ?? 'bg-faint'
 }
 
-/** Same two columns for the header labels and every row, so they stay aligned. */
-const LINK_COLS = 'grid-cols-[minmax(0,1fr)_11rem]'
+/**
+ * Same two columns for the header labels and every row, so they stay aligned.
+ * One column on a phone: a fixed 11rem committee column left the link text
+ * about 150px to wrap in. The committee drops under the purpose instead.
+ */
+const LINK_COLS = 'grid-cols-1 sm:grid-cols-[minmax(0,1fr)_11rem]'
 
 export default async function ImportantLinks() {
   const links = await getImportantLinks()
@@ -38,7 +42,7 @@ export default async function ImportantLinks() {
       ) : (
         <>
           <div
-            className={`grid ${LINK_COLS} bg-surface-2 px-5 py-[11px] text-[11px] font-bold tracking-[.05em] text-faint uppercase`}
+            className={`hidden sm:grid ${LINK_COLS} bg-surface-2 px-5 py-[11px] text-[11px] font-bold tracking-[.05em] text-faint uppercase`}
           >
             <span>Link</span>
             <span>Committee</span>
@@ -67,7 +71,7 @@ export default async function ImportantLinks() {
                   )}
                 </span>
 
-                <span className="flex items-center gap-2 text-muted">
+                <span className="mt-1.5 flex items-center gap-2 text-xs text-muted sm:mt-0 sm:text-sm">
                   <span
                     className={`size-[7px] shrink-0 rounded-full ${dotFor(link.committee)}`}
                   />

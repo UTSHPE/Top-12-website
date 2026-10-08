@@ -1,5 +1,6 @@
 import { getUpcomingEvents } from '@/lib/events'
 import MemberNav from '@/components/MemberNav'
+import MemberTabBar from '@/components/MemberTabBar'
 import EventsBrowser from './EventsBrowser'
 
 // "Open now" status turns over on the minute.
@@ -12,6 +13,7 @@ export default async function EventsPage() {
     <>
       <MemberNav />
       <EventsBrowser events={events} />
+      <MemberTabBar />
     </>
   )
 }

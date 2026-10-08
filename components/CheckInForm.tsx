@@ -135,7 +135,7 @@ export default function CheckInForm({ initialCode = '' }: { initialCode?: string
           autoCorrect="off"
           spellCheck={false}
           placeholder="e.g. abc1234"
-          className="w-full rounded-sm border border-line bg-surface-2 px-3.5 py-3 text-[15px] lowercase placeholder:normal-case placeholder:text-faint/70 focus:border-primary focus:outline-none"
+          className="w-full rounded-sm border border-line bg-surface-2 px-3.5 py-3 text-base lowercase sm:text-[15px] placeholder:normal-case placeholder:text-faint/70 focus:border-primary focus:outline-none"
         />
       </div>
 

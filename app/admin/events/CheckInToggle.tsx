@@ -51,7 +51,9 @@ export default function CheckInToggle({
           ? 'Close check-in for this event now'
           : 'Re-open check-in (only works inside the event’s check-in window)'
       }
-      className="flex items-center gap-2 disabled:opacity-50"
+      // The ::before box widens the tap target to ~40px on a phone; the
+      // switch itself is only 18px tall.
+      className="relative before:absolute before:-inset-y-3 before:-inset-x-1 before:content-[''] md:before:hidden flex items-center gap-2 disabled:opacity-50"
     >
       <span
         aria-hidden

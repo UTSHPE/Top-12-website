@@ -71,13 +71,16 @@ export default function DeleteEventButton({
         onClick={() => setOpen(true)}
         aria-label={`Delete ${title}`}
         title={`Delete ${title}`}
-        className="flex size-8 items-center justify-center rounded-sm text-[#A99E8F] transition-colors hover:bg-error/10 hover:text-error"
+        className="flex size-10 items-center justify-center rounded-sm text-[#A99E8F] transition-colors hover:bg-error/10 hover:text-error md:size-8"
       >
         <FaTrash aria-hidden className="size-3.5" />
       </button>
     )
   }
 
+  // Both dialogs are bottom sheets on a phone (items-end), so the keyboard
+  // opening for the confirm field can't hide the buttons.
+  //
   // The event is already gone at this point — this reports the one part that
   // did not happen, in amber rather than red.
   if (warning) {
@@ -86,9 +89,9 @@ export default function DeleteEventButton({
         role="dialog"
         aria-modal="true"
         aria-label="Event deleted, calendar not updated"
-        className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 px-5"
+        className="fixed inset-0 z-50 flex items-end justify-center bg-ink/50 sm:items-center sm:px-5"
       >
-        <div className="w-full max-w-[420px] rounded-lg bg-surface p-6 text-left shadow-shell">
+        <div className="max-h-[90dvh] w-full max-w-[420px] overflow-y-auto rounded-t-lg bg-surface p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] text-left shadow-shell sm:rounded-lg sm:pb-6">
           <div className="mb-5 flex items-start gap-3">
             <span className="flex size-9 flex-none items-center justify-center rounded-full bg-warning/10">
               <FaTriangleExclamation aria-hidden className="size-4 text-warning" />
@@ -119,12 +122,12 @@ export default function DeleteEventButton({
       role="dialog"
       aria-modal="true"
       aria-label={`Delete ${title}`}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 px-5"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-ink/50 sm:items-center sm:px-5"
       onClick={(e) => {
         if (e.target === e.currentTarget && !pending) close()
       }}
     >
-      <div className="w-full max-w-[420px] rounded-lg bg-surface p-6 text-left shadow-shell">
+      <div className="max-h-[90dvh] w-full max-w-[420px] overflow-y-auto rounded-t-lg bg-surface p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] text-left shadow-shell sm:rounded-lg sm:pb-6">
         <div className="mb-4 flex items-start gap-3">
           <span className="flex size-9 flex-none items-center justify-center rounded-full bg-error/10">
             <FaTriangleExclamation aria-hidden className="size-4 text-error" />
@@ -169,7 +172,7 @@ export default function DeleteEventButton({
           autoComplete="off"
           spellCheck={false}
           placeholder="Event name"
-          className="w-full rounded-sm border border-line bg-surface px-3 py-2.5 text-sm focus:border-error focus:outline-none"
+          className="w-full rounded-sm border border-line bg-surface px-3 py-2.5 text-base focus:border-error sm:text-sm focus:outline-none"
         />
 
         {error && <p className="mt-2 text-xs leading-tight text-error">{error}</p>}

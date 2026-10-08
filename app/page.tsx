@@ -3,6 +3,7 @@ import { FaArrowRight } from 'react-icons/fa6'
 import { getOpenEvent, getUpcomingEvents } from '@/lib/events'
 import { daysUntil } from '@/lib/format'
 import MemberNav from '@/components/MemberNav'
+import MemberTabBar from '@/components/MemberTabBar'
 import NextEventPanel from '@/components/NextEventPanel'
 import EventGroup from '@/components/EventGroup'
 
@@ -46,6 +47,7 @@ export default async function Home() {
           </Link>
         )}
       </main>
+      <MemberTabBar />
     </>
   )
 }

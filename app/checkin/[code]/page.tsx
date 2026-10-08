@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import MemberNav from '@/components/MemberNav'
+import MemberTabBar from '@/components/MemberTabBar'
 import CheckInForm from '@/components/CheckInForm'
 import CheckInHeader from '../CheckInHeader'
 
@@ -33,6 +34,7 @@ export default async function CheckInWithCodePage({
           <CheckInForm initialCode={decodeURIComponent(code)} />
         </div>
       </main>
+      <MemberTabBar />
     </>
   )
 }

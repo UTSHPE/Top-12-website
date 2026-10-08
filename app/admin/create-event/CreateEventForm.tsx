@@ -97,9 +97,9 @@ export default function CreateEventForm({ officerName }: { officerName: string }
     )
 
   return (
-    <div className="mx-auto w-full max-w-[820px] px-5 py-6 md:px-7">
+    <div className="mx-auto w-full max-w-[820px] px-3 py-4 sm:px-5 sm:py-6 md:px-7">
       <div className="overflow-hidden rounded-xl bg-surface shadow-card">
-        <div className="px-6 pt-7 pb-2.5 md:px-[34px]">
+        <div className="px-4 pt-6 pb-2 sm:px-6 sm:pt-7 sm:pb-2.5 md:px-[34px]">
           <h1 className="font-display mb-1 text-[26px] font-extrabold tracking-[-.5px]">
             Create event
           </h1>
@@ -110,7 +110,7 @@ export default function CreateEventForm({ officerName }: { officerName: string }
 
         <form
           onSubmit={handleSubmit}
-          className="flex flex-col gap-[22px] px-6 pt-3.5 pb-7 md:px-[34px]"
+          className="flex flex-col gap-[22px] px-4 pt-3.5 pb-6 sm:px-6 sm:pb-7 md:px-[34px]"
         >
           <Panel eyebrow="Event details" color="var(--color-primary)" Icon={FaRegCircleDot}>
             <div>
@@ -316,7 +316,7 @@ export default function CreateEventForm({ officerName }: { officerName: string }
                     aria-label="Number of weeks"
                     value={weekCount}
                     onChange={(e) => setWeekCount(Number(e.target.value))}
-                    className="rounded-sm border-[1.5px] border-line bg-surface px-3 py-2 text-sm font-semibold outline-none focus:border-primary-bright"
+                    className="rounded-sm border-[1.5px] border-line bg-surface px-3 py-2 text-base font-semibold outline-none focus:border-primary-bright sm:text-sm"
                   >
                     {Array.from({ length: 15 }, (_, i) => i + 2).map((n) => (
                       <option key={n} value={n}>
@@ -356,10 +356,10 @@ export default function CreateEventForm({ officerName }: { officerName: string }
 
           {errorMsg && <ErrorStrip title="Couldn't create that." detail={errorMsg} />}
 
-          <div className="flex justify-end gap-3">
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <Link
               href="/admin"
-              className="rounded-md border-[1.5px] border-line bg-surface px-[22px] py-3 text-[15px] font-semibold text-muted"
+              className="rounded-md border-[1.5px] border-line bg-surface px-[22px] py-3 text-center text-[15px] font-semibold text-muted"
             >
               Cancel
             </Link>
@@ -412,8 +412,8 @@ function CodeGenerated({
 
   return (
     <>
-      <div className="flex flex-1 items-center justify-center px-5 py-10">
-        <div className="w-full max-w-[520px] rounded-xl bg-ink p-8 text-center text-white shadow-shell sm:p-9">
+      <div className="flex flex-1 items-center justify-center px-4 py-8 sm:px-5 sm:py-10">
+        <div className="w-full max-w-[520px] rounded-xl bg-ink p-6 text-center text-white shadow-shell sm:p-9">
           <div className="mx-auto mb-[18px] flex size-14 animate-popcheck items-center justify-center rounded-full bg-success">
             <FaCheck aria-hidden className="size-[26px]" />
           </div>

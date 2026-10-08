@@ -73,7 +73,7 @@ export default function RaffleList({ names }: { names: string[] }) {
         onChange={(e) => setText(e.target.value)}
         spellCheck={false}
         placeholder="Nobody has checked in yet. Names appear here as they arrive — refresh the page to pull in the latest."
-        className="min-h-[380px] w-full resize-y rounded-sm border-[1.5px] border-line bg-surface p-3.5 text-sm leading-7 outline-none transition-colors focus:border-primary-bright"
+        className="min-h-[380px] w-full resize-y rounded-sm border-[1.5px] border-line bg-surface p-3.5 text-base leading-7 sm:text-sm outline-none transition-colors focus:border-primary-bright"
       />
 
       <div className="mt-3 flex flex-wrap items-center gap-2">

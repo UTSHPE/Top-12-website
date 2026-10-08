@@ -10,8 +10,11 @@ import { FaCheck } from 'react-icons/fa6'
  * reference for how they're composed — this file only owns what they look like.
  */
 
-export const INPUT =
-  'w-full rounded-[10px] border-[1.5px] border-line bg-surface px-[13px] py-[11px] text-[15px] font-semibold outline-none transition-colors focus:border-primary-bright'
+// Text is 16px on phones: iOS Safari zooms the page into any field smaller
+// than that the moment it's focused, and doesn't zoom back out.
+const FIELD =
+  'w-full rounded-[10px] border-[1.5px] border-line bg-surface px-[13px] py-[11px] font-semibold outline-none transition-colors focus:border-primary-bright'
+export const INPUT = `${FIELD} text-base sm:text-[15px]`
 export const LABEL = 'mb-1.5 block text-[13px] font-semibold text-muted'
 
 export function Panel({
@@ -26,7 +29,7 @@ export function Panel({
   children: React.ReactNode
 }) {
   return (
-    <section className="rounded-[14px] bg-surface-2 p-5">
+    <section className="rounded-[14px] bg-surface-2 p-4 sm:p-5">
       <h2
         className="font-display mb-4 flex items-center gap-1.5 text-[13px] font-bold tracking-[.06em] uppercase"
         style={{ color }}
@@ -112,7 +115,7 @@ export function DateField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         required
-        className={`${INPUT} text-sm`}
+        className={`${FIELD} text-base sm:text-sm`}
       />
     </div>
   )

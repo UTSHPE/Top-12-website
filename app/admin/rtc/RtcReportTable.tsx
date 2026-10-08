@@ -5,7 +5,9 @@ import { FaChevronRight, FaFileCsv } from 'react-icons/fa6'
 import type { RtcMemberRow } from '@/lib/rtc'
 import { formatDateLong } from '@/lib/format'
 
-const COLS = 'grid-cols-[1.6fr_1fr_150px]'
+// On a phone the EID moves under the name and the count column narrows — the
+// fixed 150px count plus an EID column left the name a sliver.
+const COLS = 'grid-cols-[minmax(0,1fr)_64px] sm:grid-cols-[1.6fr_1fr_150px]'
 
 /**
  * The report table, with each member's events expanding in place.
@@ -75,8 +77,11 @@ export default function RtcReportTable({
 
       <div className={`grid ${COLS} bg-surface-2 px-5 py-[11px] text-[11px] font-bold tracking-[.05em] text-faint uppercase`}>
         <span>Member</span>
-        <span>EID</span>
-        <span className="text-right">RTC events attended</span>
+        <span className="hidden sm:block">EID</span>
+        <span className="text-right">
+          <span className="sm:hidden">RTC</span>
+          <span className="hidden sm:inline">RTC events attended</span>
+        </span>
       </div>
 
       {rows.map((row) => {
@@ -95,9 +100,14 @@ export default function RtcReportTable({
                     open ? 'rotate-90' : ''
                   }`}
                 />
-                <span className="truncate font-bold">{row.name}</span>
+                <span className="min-w-0">
+                  <span className="block truncate font-bold">{row.name}</span>
+                  <span className="block truncate font-mono text-xs text-muted sm:hidden">
+                    {row.eid}
+                  </span>
+                </span>
               </span>
-              <span className="truncate pr-3 font-mono text-[13px] text-muted">
+              <span className="hidden truncate pr-3 font-mono text-[13px] text-muted sm:block">
                 {row.eid}
               </span>
               <span

@@ -55,7 +55,8 @@ export default function RtcToggle({
           ? 'Counts toward RTC. Click to stop counting it.'
           : 'Not counted toward RTC. Click to count it — works on past events too.'
       }
-      className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold tracking-[.04em] uppercase transition-colors disabled:opacity-50 ${
+      // ::before widens the tap target on a phone — see CheckInToggle.
+      className={`relative before:absolute before:-inset-y-2 before:-inset-x-1 before:content-[''] md:before:hidden flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold tracking-[.04em] uppercase transition-colors disabled:opacity-50 ${
         optimistic
           ? 'bg-secondary/12 text-secondary'
           : 'bg-surface-2 text-[#A99E8F] hover:text-muted'

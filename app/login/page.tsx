@@ -8,7 +8,8 @@ import ErrorStrip from '@/components/ErrorStrip'
 import Logo from '@/components/Logo'
 
 const INPUT =
-  'w-full rounded-[10px] border-[1.5px] border-line bg-surface px-[13px] py-[11px] text-[15px] font-semibold outline-none transition-colors focus:border-primary-bright'
+  // 16px on phones — iOS zooms into anything smaller on focus.
+  'w-full rounded-[10px] border-[1.5px] border-line bg-surface px-[13px] py-[11px] text-base font-semibold outline-none transition-colors focus:border-primary-bright sm:text-[15px]'
 const LABEL = 'mb-1.5 block text-[13px] font-semibold text-muted'
 
 /**

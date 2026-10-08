@@ -16,9 +16,11 @@ const SIZES: Record<Size, { tile: string; gap: string; border: string }> = {
     gap: 'gap-1.5',
     border: 'border-2',
   },
+  // Smaller under `sm`: six 52px tiles plus gaps are 362px, wider than the
+  // ink success card leaves on a 390px phone, so the code ran off the card.
   lg: {
-    tile: 'h-16 w-[52px] rounded-[11px] text-[32px]',
-    gap: 'gap-2.5',
+    tile: 'h-12 w-10 rounded-[9px] text-2xl sm:h-16 sm:w-[52px] sm:rounded-[11px] sm:text-[32px]',
+    gap: 'gap-2 sm:gap-2.5',
     border: 'border-2',
   },
   xl: {

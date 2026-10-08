@@ -35,7 +35,7 @@ export default async function AdminLeaderboardPage() {
         } on the board`}
       />
 
-      <div className="min-w-0 flex-1 px-5 py-6 md:px-7">
+      <div className="min-w-0 flex-1 px-4 py-5 sm:px-5 sm:py-6 md:px-7">
         <div className="mx-auto max-w-[720px]">
           <div className="overflow-hidden rounded-lg bg-ink px-5 pt-[26px] pb-[30px] text-white shadow-card sm:px-[30px]">
             <div className="mb-[22px] flex items-center justify-between gap-4">

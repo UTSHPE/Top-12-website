@@ -4,12 +4,10 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import Logo from '@/components/Logo'
 
-// "Home" is dropped on phones — the logo already goes there, and the row has
-// to fit a 320px viewport alongside the Check In button.
 const LINKS = [
-  { href: '/', label: 'Home', phone: false },
-  { href: '/events', label: 'Events', phone: true },
-  { href: '/leaderboard', label: 'Leaderboard', phone: true },
+  { href: '/', label: 'Home' },
+  { href: '/events', label: 'Events' },
+  { href: '/leaderboard', label: 'Leaderboard' },
 ]
 
 /**
@@ -21,8 +19,13 @@ const LINKS = [
  * `:focus-visible` globally, so both links already share one.
  */
 const NAV_BUTTON =
-  'flex-none rounded-sm bg-primary-bright px-3 py-2 font-bold text-white transition-colors hover:bg-primary-hover sm:px-4 sm:py-2.5'
+  'flex-none rounded-sm bg-primary-bright px-4 py-2.5 font-bold text-white transition-colors hover:bg-primary-hover'
 
+/**
+ * The member header. Desktop only for navigation: under `md` it is just the
+ * logo, and every link — Officer sign in included, which the old phone row had
+ * no room for — lives in MemberTabBar at the bottom of the screen.
+ */
 export default function MemberNav() {
   const pathname = usePathname()
 
@@ -43,7 +46,7 @@ export default function MemberNav() {
         </span>
       </Link>
 
-      <nav className="flex items-center gap-3 text-[13px] font-medium text-body sm:gap-[26px] sm:text-sm">
+      <nav className="hidden items-center gap-[26px] text-sm font-medium text-body md:flex">
         {LINKS.map((link) => {
           const active = pathname === link.href
           return (
@@ -51,9 +54,7 @@ export default function MemberNav() {
               key={link.href}
               href={link.href}
               aria-current={active ? 'page' : undefined}
-              className={`ncta ${link.phone ? '' : 'hidden sm:inline'} ${
-                active ? 'font-bold text-primary' : ''
-              }`}
+              className={`ncta ${active ? 'font-bold text-primary' : ''}`}
             >
               {link.label}
             </Link>
@@ -62,7 +63,7 @@ export default function MemberNav() {
         {/* Both CTAs sit in their own group: the nav's 26px rhythm is spaced
             for text links and reads as a gap between two adjacent filled
             buttons, so the pair gets a tighter gap of its own. */}
-        <span className="flex items-center gap-2 sm:gap-2.5">
+        <span className="flex items-center gap-2.5">
           <Link
             href="/checkin"
             aria-current={pathname.startsWith('/checkin') ? 'page' : undefined}
@@ -73,9 +74,8 @@ export default function MemberNav() {
 
           {/* Points at the console, not the login form: the /admin proxy
               bounces signed-out visitors to /login and lets signed-in officers
-              straight through, so one link is correct in both cases. Stays
-              hidden on phones — the row has to fit a 320px viewport. */}
-          <Link href="/admin" className={`${NAV_BUTTON} hidden sm:inline-flex`}>
+              straight through, so one link is correct in both cases. */}
+          <Link href="/admin" className={NAV_BUTTON}>
             Officer sign in
           </Link>
         </span>

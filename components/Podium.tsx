@@ -55,7 +55,10 @@ function PodiumSpot({ entry, place }: { entry: LeaderboardEntry; place: Place })
 
   return (
     <div
-      className={`relative flex-1 text-center ${isChampion ? 'max-w-[162px]' : 'max-w-[150px]'}`}
+      // min-w-0: without it the truncated major below still claims its full
+      // width as this flex item's minimum, and the podium pushed the member
+      // leaderboard 9px wider than a 390px phone.
+      className={`relative min-w-0 flex-1 text-center ${isChampion ? 'max-w-[162px]' : 'max-w-[150px]'}`}
     >
       {isChampion && (
         <>

@@ -138,7 +138,7 @@ export default function EditEventForm({ event }: { event: EditableEvent }) {
 
   if (warning) {
     return (
-      <div className="mx-auto w-full max-w-[820px] px-5 py-6 md:px-7">
+      <div className="mx-auto w-full max-w-[820px] px-3 py-4 sm:px-5 sm:py-6 md:px-7">
         <div className="rounded-xl bg-surface p-6 shadow-card md:p-8">
           <div className="mb-5 flex items-start gap-3">
             <span className="flex size-9 flex-none items-center justify-center rounded-full bg-warning/10">
@@ -169,9 +169,9 @@ export default function EditEventForm({ event }: { event: EditableEvent }) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[820px] px-5 py-6 md:px-7">
+    <div className="mx-auto w-full max-w-[820px] px-3 py-4 sm:px-5 sm:py-6 md:px-7">
       <div className="overflow-hidden rounded-xl bg-surface shadow-card">
-        <div className="px-6 pt-7 pb-2.5 md:px-[34px]">
+        <div className="px-4 pt-6 pb-2 sm:px-6 sm:pt-7 sm:pb-2.5 md:px-[34px]">
           <h1 className="font-display mb-1 text-[26px] font-extrabold tracking-[-.5px]">
             {event.title}
           </h1>
@@ -183,7 +183,7 @@ export default function EditEventForm({ event }: { event: EditableEvent }) {
 
         <form
           onSubmit={handleSubmit}
-          className="flex flex-col gap-[22px] px-6 pt-3.5 pb-7 md:px-[34px]"
+          className="flex flex-col gap-[22px] px-4 pt-3.5 pb-6 sm:px-6 sm:pb-7 md:px-[34px]"
         >
           {/* Shown, never editable. Seeing the code confirms which event this
               is; changing it would strand anyone holding a printed copy. */}
@@ -412,10 +412,10 @@ export default function EditEventForm({ event }: { event: EditableEvent }) {
 
           {errorMsg && <ErrorStrip title="Couldn't save that." detail={errorMsg} />}
 
-          <div className="flex justify-end gap-3">
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <Link
               href="/admin/events"
-              className="rounded-md border-[1.5px] border-line bg-surface px-[22px] py-3 text-[15px] font-semibold text-muted"
+              className="rounded-md border-[1.5px] border-line bg-surface px-[22px] py-3 text-center text-[15px] font-semibold text-muted"
             >
               Cancel
             </Link>
