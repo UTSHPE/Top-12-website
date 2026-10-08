@@ -164,10 +164,6 @@ export default function CheckInForm({ initialCode = '' }: { initialCode?: string
             />
           ))}
         </div>
-        <p className="mt-2 text-xs text-faint">
-          Six characters, letters and numbers, shown on the slide. You can paste
-          the whole code.
-        </p>
       </fieldset>
 
       {error && (
@@ -185,7 +181,7 @@ export default function CheckInForm({ initialCode = '' }: { initialCode?: string
         disabled={!ready || pending}
         className="w-full rounded-sm bg-primary-bright py-3.5 text-[15px] font-bold text-white shadow-cta transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:bg-primary-bright/40 disabled:shadow-none"
       >
-        {pending ? 'Checking in…' : 'Check in'}
+        {pending ? 'CHECKING IN…' : 'CHECK IN'}
       </button>
     </form>
   )

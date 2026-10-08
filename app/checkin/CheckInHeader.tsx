@@ -14,12 +14,9 @@ export default async function CheckInHeader() {
 
   return (
     <header className="mb-6">
-      <h1 className="font-display text-[28px] leading-tight font-extrabold tracking-[-.6px] sm:text-[32px]">
-        Check in
+      <h1 className="font-display text-center text-[28px] leading-tight font-extrabold tracking-[-.6px] sm:text-[32px]">
+        CHECK IN!!
       </h1>
-      <p className="mt-1.5 text-[15px] text-body">
-        Enter your EID and the code on the slide.
-      </p>
 
       {open && (
         <div className="mt-5 flex items-center gap-3 rounded-md bg-surface px-4 py-3.5 shadow-card">

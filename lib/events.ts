@@ -84,6 +84,12 @@ const CATEGORY_STYLES: Record<CategoryKey, Omit<CategoryStyle, 'label'>> = {
 }
 
 /**
+ * The laptop event ticket is always orange, whatever the committee — one color
+ * keeps the grid calm and lets the title carry each card.
+ */
+export const TICKET_STYLE = CATEGORY_STYLES.orange
+
+/**
  * The committees the create form offers, in the order officers see them.
  *
  * Presented to officers as "Committee". The database column stays
@@ -115,14 +121,6 @@ export const EVENT_TYPES = [
   'SHPEtina',
   'Fundraiser (Treasury)',
   'Other',
-] as const
-
-/** Filter chips on /events. "All" is prepended by the page itself. */
-export const FILTERS = [
-  'General Meeting',
-  'Study Night',
-  'Professional Development',
-  'Social',
 ] as const
 
 // 'Study Night' and 'Social' are no longer offered on the create form, but rows
@@ -158,20 +156,6 @@ export function committeeLabel(
   const primary = shortLabel(event.eventType)
   if (!event.secondaryEventType) return primary
   return `${primary} + ${shortLabel(event.secondaryEventType)}`
-}
-
-/**
- * Does this event belong to the given committee?
- *
- * Matches either slot. A joint event has to surface for BOTH of its committees
- * — checking only `eventType` would hide it from the co-host, which is the
- * whole reason the second field exists.
- */
-export function matchesCommittee(
-  event: Pick<ChapterEvent, 'eventType' | 'secondaryEventType'>,
-  committee: string
-): boolean {
-  return event.eventType === committee || event.secondaryEventType === committee
 }
 
 // Supabase row shape for the columns we select.

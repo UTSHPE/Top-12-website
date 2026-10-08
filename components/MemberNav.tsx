@@ -9,37 +9,39 @@ const LINKS = [
   { href: '/', label: 'Home' },
   { href: '/events', label: 'Events' },
   { href: '/leaderboard', label: 'Leaderboard' },
-  { href: '/stats', label: 'My stats' },
+  { href: '/stats', label: 'Stats' },
 ]
 
-/**
- * The nav's filled-button treatment, shared by both CTAs so they can't drift.
- *
- * Colors come from the theme tokens rather than literals — `primary-bright` is
- * the CTA orange and `primary-hover` its hover state, both declared in
- * globals.css. The focus ring is not here on purpose: globals.css styles
- * `:focus-visible` globally, so both links already share one.
- */
-const NAV_BUTTON =
-  'flex-none rounded-sm bg-primary-bright px-4 py-2.5 font-bold text-white transition-colors hover:bg-primary-hover'
+/** One pill shape for the center links and the Check in button, so they match. */
+const PILL =
+  'rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap transition-colors'
+const PILL_ACTIVE = 'bg-primary-bright text-white shadow-cta'
+
+/** Prefix match, so nested routes still light up their section. Home is exact. */
+function isActive(pathname: string, href: string): boolean {
+  if (href === '/') return pathname === '/'
+  return pathname === href || pathname.startsWith(`${href}/`)
+}
 
 /**
- * The member header. Desktop only for navigation: under `md` it is the logo
- * plus a quiet Officer sign in link on the right, and every member link lives
- * in MemberTabBar at the bottom of the screen.
+ * The member header. Under `md` it is the logo plus a quiet Officer sign in
+ * link, and every member link lives in MemberTabBar at the bottom of the
+ * screen. From `md` up it is a three-column grid — logo, the page links in a
+ * centered pill, then Officer sign in and the Check in CTA — so the pill sits
+ * at the true center no matter how wide the two sides are.
  */
 export default function MemberNav() {
   const pathname = usePathname()
 
   return (
-    <header className="flex h-[62px] flex-none items-center justify-between border-b border-hairline bg-surface px-5 sm:px-[30px]">
+    <header className="flex h-[62px] flex-none items-center justify-between gap-4 border-b border-hairline bg-surface px-5 sm:px-[30px] md:grid md:grid-cols-[1fr_auto_1fr]">
       {/* Two sizes, and the display utility has to sit on a wrapper rather than
           on Logo itself. Logo hard-codes `inline-flex` on its own root, and
           Tailwind emits `.hidden` *before* `.inline-flex` in the utilities
           layer — same specificity, so the component's class won and the phone
           rendered both lockups side by side. On separate elements there is no
           conflict to lose. */}
-      <Link href="/" aria-label="UT SHPE home" className="flex-none">
+      <Link href="/" aria-label="UT SHPE home" className="flex-none justify-self-start">
         <span className="sm:hidden">
           <Logo height={24} />
         </span>
@@ -48,51 +50,53 @@ export default function MemberNav() {
         </span>
       </Link>
 
-      {/* Phone: officers only, so it stays a quiet text link rather than a
-          filled button competing with the tab bar's Check in. Same /admin
-          target as the desktop button below. */}
-      <Link
-        href="/admin"
-        className="flex items-center gap-1.5 rounded-sm px-2.5 py-2 text-[13px] font-semibold text-muted transition-colors hover:text-primary md:hidden"
+      <nav
+        aria-label="Site"
+        className="hidden items-center gap-1 rounded-full bg-bg p-1 md:flex"
       >
-        <FaUserShield aria-hidden className="size-3.5" />
-        Officer sign in
-      </Link>
-
-      <nav className="hidden items-center gap-[26px] text-sm font-medium text-body md:flex">
         {LINKS.map((link) => {
-          const active = pathname === link.href
+          const active = isActive(pathname, link.href)
           return (
             <Link
               key={link.href}
               href={link.href}
               aria-current={active ? 'page' : undefined}
-              className={`ncta ${active ? 'font-bold text-primary' : ''}`}
+              className={`${PILL} ${active ? PILL_ACTIVE : 'text-body hover:text-primary'}`}
             >
               {link.label}
             </Link>
           )
         })}
-        {/* Both CTAs sit in their own group: the nav's 26px rhythm is spaced
-            for text links and reads as a gap between two adjacent filled
-            buttons, so the pair gets a tighter gap of its own. */}
-        <span className="flex items-center gap-2.5">
-          <Link
-            href="/checkin"
-            aria-current={pathname.startsWith('/checkin') ? 'page' : undefined}
-            className={NAV_BUTTON}
-          >
-            Check in
-          </Link>
+      </nav>
 
-          {/* Points at the console, not the login form: the /admin proxy
-              bounces signed-out visitors to /login and lets signed-in officers
-              straight through, so one link is correct in both cases. */}
-          <Link href="/admin" className={NAV_BUTTON}>
-            Officer sign in
+      <div className="flex items-center gap-2 justify-self-end">
+        {/* Officers only, so it's a white pill rather than a second orange one
+            competing with Check in. Points at the console, not
+            the login form: the /admin proxy bounces signed-out visitors to
+            /login and lets signed-in officers straight through. */}
+        <span className="flex rounded-full bg-bg p-1">
+          <Link
+            href="/admin"
+            aria-label="Officer sign in (TOP12)"
+            className={`${PILL} flex items-center gap-1.5 bg-surface text-ink shadow-card hover:text-primary`}
+          >
+            <FaUserShield aria-hidden className="size-3.5" />
+            TOP12
           </Link>
         </span>
-      </nav>
+
+        {/* Phone has Check in in the tab bar, so the button is desktop only.
+            Same pill-in-a-track shape as the center links. */}
+        <span className="hidden rounded-full bg-bg p-1 md:flex">
+          <Link
+            href="/checkin"
+            aria-current={isActive(pathname, '/checkin') ? 'page' : undefined}
+            className={`${PILL} ${PILL_ACTIVE} tracking-[.04em] hover:bg-primary-hover`}
+          >
+            CHECK IN
+          </Link>
+        </span>
+      </div>
     </header>
   )
 }

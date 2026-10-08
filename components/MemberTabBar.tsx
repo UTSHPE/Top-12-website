@@ -14,7 +14,7 @@ import type { IconType } from 'react-icons'
 const TABS: { href: string; label: string; Icon: IconType }[] = [
   { href: '/', label: 'Home', Icon: FaHouse },
   { href: '/events', label: 'Events', Icon: FaCalendarDay },
-  { href: '/checkin', label: 'Check in', Icon: FaCircleCheck },
+  { href: '/checkin', label: 'CHECK IN', Icon: FaCircleCheck },
   { href: '/leaderboard', label: 'Board', Icon: FaRankingStar },
   // Officer sign in lives in the phone header (MemberNav) — members never use
   // it, so it doesn't earn a tab.

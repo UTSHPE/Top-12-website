@@ -1,32 +1,34 @@
 import { FaRegClock, FaLocationDot } from 'react-icons/fa6'
-import { categoryStyle, committeeLabel, type ChapterEvent } from '@/lib/events'
+import { committeeLabel, TICKET_STYLE, type ChapterEvent } from '@/lib/events'
 import { formatDay, formatDayTime, formatMonth, formatPoints } from '@/lib/format'
 import Avatar from '@/components/Avatar'
 import StatusPill from '@/components/StatusPill'
-import AddToCalendarLink from '@/components/AddToCalendarLink'
 
 /**
- * The member-facing event ticket: a tinted top block, a perforation with two
- * notches bitten out of the card edges, and a tear-off stub carrying the host
- * and the points on offer.
+ * The member-facing event ticket: a tinted top block carrying the date and the
+ * title, a perforation with two notches bitten out of the card edges, and a
+ * tear-off stub with the committee, time, place, host and points on offer.
+ *
+ * Every ticket is orange (TICKET_STYLE) regardless of committee, so the title
+ * is what tells cards apart.
  *
  * The notches are filled with the page background, so this card is only ever
  * placed on `bg-bg`.
  */
 export default function EventCard({ event }: { event: ChapterEvent }) {
-  const category = categoryStyle(event.eventType)
+  const style = TICKET_STYLE
   const host = event.host || 'UT SHPE'
 
   return (
     <article className="lift relative rounded-lg bg-surface shadow-raised">
       <div
         className="flex items-start justify-between gap-3 rounded-t-lg px-[18px] pt-4 pb-[15px]"
-        style={{ background: category.tint }}
+        style={{ background: style.tint }}
       >
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <div
             className="min-w-[50px] flex-none rounded-md px-2.5 py-2 text-center text-white"
-            style={{ background: category.accent, boxShadow: category.chipShadow }}
+            style={{ background: style.accent, boxShadow: style.chipShadow }}
           >
             <div className="text-[10px] font-bold tracking-[.04em] uppercase">
               {formatMonth(event.start)}
@@ -36,30 +38,9 @@ export default function EventCard({ event }: { event: ChapterEvent }) {
             </div>
           </div>
 
-          <div>
-            <div
-              className="text-[11px] font-extrabold tracking-[.05em] uppercase"
-              style={{ color: category.accent }}
-            >
-              {committeeLabel(event)}
-            </div>
-            <div
-              className="mt-[3px] flex items-center gap-1.5 text-xs"
-              style={{ color: category.meta }}
-            >
-              <FaRegClock className="size-3 flex-none" aria-hidden />
-              {formatDayTime(event.start)}
-            </div>
-            {event.location && (
-              <div
-                className="mt-0.5 flex items-center gap-1.5 text-xs"
-                style={{ color: category.meta }}
-              >
-                <FaLocationDot className="size-3 flex-none" aria-hidden />
-                {event.location}
-              </div>
-            )}
-          </div>
+          <h3 className="font-display line-clamp-2 min-w-0 text-[21px] leading-tight font-extrabold tracking-[-.3px] text-ink">
+            {event.title}
+          </h3>
         </div>
 
         <StatusPill isOpen={event.isOpen} />
@@ -69,16 +50,28 @@ export default function EventCard({ event }: { event: ChapterEvent }) {
       <div aria-hidden className="relative h-3.5">
         <div
           className="absolute top-1/2 right-3 left-3 border-t-2 border-dashed"
-          style={{ borderColor: category.perforation }}
+          style={{ borderColor: style.perforation }}
         />
         <div className="absolute -left-[7px] top-1/2 size-3.5 -translate-y-1/2 rounded-full bg-bg" />
         <div className="absolute -right-[7px] top-1/2 size-3.5 -translate-y-1/2 rounded-full bg-bg" />
       </div>
 
       <div className="px-[18px] pt-1 pb-[18px]">
-        <h3 className="font-display mb-3.5 text-[19px] leading-tight font-extrabold">
-          {event.title}
-        </h3>
+        <div className="mb-3.5">
+          <div className="text-[11px] font-extrabold tracking-[.05em] text-primary uppercase">
+            {committeeLabel(event)}
+          </div>
+          <div className="mt-[3px] flex items-center gap-1.5 text-xs text-muted">
+            <FaRegClock className="size-3 flex-none" aria-hidden />
+            {formatDayTime(event.start)}
+          </div>
+          {event.location && (
+            <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted">
+              <FaLocationDot className="size-3 flex-none" aria-hidden />
+              {event.location}
+            </div>
+          )}
+        </div>
 
         <div className="flex items-center gap-2.5 rounded-[13px] bg-surface-2 px-2.5 py-2">
           <Avatar
@@ -96,11 +89,6 @@ export default function EventCard({ event }: { event: ChapterEvent }) {
             +{formatPoints(event.points)}
           </span>
         </div>
-
-        <AddToCalendarLink
-          event={event}
-          className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-sm bg-tint-orange py-2.5 text-[13px] font-bold text-primary transition-colors hover:bg-[#f6e2cf]"
-        />
       </div>
     </article>
   )
