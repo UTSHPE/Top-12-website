@@ -9,16 +9,18 @@ import {
   FaPlus,
   FaRankingStar,
   FaRoad,
+  FaUsers,
 } from 'react-icons/fa6'
 import type { IconType } from 'react-icons'
 
-/** `short` is the bottom-tab label — five of them have to fit a 320px phone. */
+/** `short` is the bottom-tab label — six of them have to fit a 320px phone. */
 const ITEMS: { href: string; label: string; short: string; Icon: IconType }[] = [
   { href: '/admin', label: 'Dashboard', short: 'Home', Icon: FaGauge },
   { href: '/admin/events', label: 'Events', short: 'Events', Icon: FaCalendarDay },
   { href: '/admin/create-event', label: 'Create Event', short: 'Create', Icon: FaPlus },
   { href: '/admin/leaderboard', label: 'Leaderboard', short: 'Board', Icon: FaRankingStar },
   { href: '/admin/rtc', label: 'RTC', short: 'RTC', Icon: FaRoad },
+  { href: '/admin/gm', label: 'GM Attendance', short: 'GMs', Icon: FaUsers },
 ]
 
 const ITEM_BASE =
@@ -88,7 +90,7 @@ export default function AdminNav() {
           sat off-screen in a sideways scroll. */}
       <nav
         aria-label="Console"
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-white/10 bg-ink pb-[env(safe-area-inset-bottom)] md:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-white/10 bg-ink pb-[env(safe-area-inset-bottom)] md:hidden"
       >
         {ITEMS.map(({ href, label, short, Icon }) => {
           const active = isActive(pathname, href)
