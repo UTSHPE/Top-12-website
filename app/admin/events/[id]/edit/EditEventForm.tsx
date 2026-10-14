@@ -114,7 +114,7 @@ export default function EditEventForm({ event }: { event: EditableEvent }) {
         isRtc,
         location,
         addDriver:
-          addDriver && !event.driver
+          addDriver && !event.driver && !event.isInternal
             ? { basePoints: driverBasePoints, multiplier: driverMultiplier }
             : undefined,
       })
@@ -176,8 +176,9 @@ export default function EditEventForm({ event }: { event: EditableEvent }) {
             {event.title}
           </h1>
           <p className="text-sm text-faint">
-            Only the title, timing, location, RTC status, and adding driver sign-in can be
-            changed.
+            {event.isInternal
+              ? 'Only the title, timing, location, and RTC status can be changed.'
+              : 'Only the title, timing, location, RTC status, and adding driver sign-in can be changed.'}
           </p>
         </div>
 
@@ -201,6 +202,11 @@ export default function EditEventForm({ event }: { event: EditableEvent }) {
                 {event.accessCode}
               </b>
             </span>
+            {event.isInternal && (
+              <span className="text-muted">
+                <b className="font-bold text-ink">Internal</b> — no Google Calendar, 0 points
+              </span>
+            )}
           </div>
 
           <Panel eyebrow="Event details" color="var(--color-primary)" Icon={FaRegCircleDot}>
@@ -217,7 +223,9 @@ export default function EditEventForm({ event }: { event: EditableEvent }) {
                 className={INPUT}
               />
               <p className="mt-1.5 text-xs text-faint">
-                Also updated on the Google Calendar entry. Existing check-ins are unaffected.
+                {event.isInternal
+                  ? 'Existing check-ins are unaffected.'
+                  : 'Also updated on the Google Calendar entry. Existing check-ins are unaffected.'}
               </p>
             </div>
           </Panel>
@@ -237,41 +245,44 @@ export default function EditEventForm({ event }: { event: EditableEvent }) {
           </Panel>
 
           {/* Can be switched on late, but never changed or removed: once the
-              code exists it may already be in a group chat. */}
-          <Panel eyebrow="Driver sign-in" color="var(--color-secondary)" Icon={FaCar}>
-            {event.driver ? (
-              <div className="flex flex-col items-center gap-3 rounded-md bg-surface px-4 py-5">
-                <DriverCode code={event.driver.accessCode} />
-                <p className="flex items-center gap-1.5 text-[13px] text-muted">
-                  <FaLock aria-hidden className="size-3 text-faint" />
-                  Drivers earn{' '}
-                  <b className="font-bold text-ink">
-                    {formatPoints(event.driver.points)} pts
-                  </b>{' '}
-                  ({event.driver.basePoints} × {event.driver.multiplier.toFixed(1)}) on top of
-                  attendance.
-                </p>
-              </div>
-            ) : (
-              <>
-                <CheckboxField
-                  id="addDriver"
-                  label="Add a separate code for drivers"
-                  hint="Drivers enter a second code and earn these points on top of attendance. Can't be changed once saved."
-                  checked={addDriver}
-                  onChange={setAddDriver}
-                />
-                {addDriver && (
-                  <DriverPointsFields
-                    basePoints={driverBasePoints}
-                    multiplier={driverMultiplier}
-                    onBasePoints={setDriverBasePoints}
-                    onMultiplier={setDriverMultiplier}
+              code exists it may already be in a group chat. Absent on internal
+              events, which are worth nothing — updateEvent refuses one anyway. */}
+          {!event.isInternal && (
+            <Panel eyebrow="Driver sign-in" color="var(--color-secondary)" Icon={FaCar}>
+              {event.driver ? (
+                <div className="flex flex-col items-center gap-3 rounded-md bg-surface px-4 py-5">
+                  <DriverCode code={event.driver.accessCode} />
+                  <p className="flex items-center gap-1.5 text-[13px] text-muted">
+                    <FaLock aria-hidden className="size-3 text-faint" />
+                    Drivers earn{' '}
+                    <b className="font-bold text-ink">
+                      {formatPoints(event.driver.points)} pts
+                    </b>{' '}
+                    ({event.driver.basePoints} × {event.driver.multiplier.toFixed(1)}) on top of
+                    attendance.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <CheckboxField
+                    id="addDriver"
+                    label="Add a separate code for drivers"
+                    hint="Drivers enter a second code and earn these points on top of attendance. Can't be changed once saved."
+                    checked={addDriver}
+                    onChange={setAddDriver}
                   />
-                )}
-              </>
-            )}
-          </Panel>
+                  {addDriver && (
+                    <DriverPointsFields
+                      basePoints={driverBasePoints}
+                      multiplier={driverMultiplier}
+                      onBasePoints={setDriverBasePoints}
+                      onMultiplier={setDriverMultiplier}
+                    />
+                  )}
+                </>
+              )}
+            </Panel>
+          )}
 
           {event.headcount > 0 && (
             <div

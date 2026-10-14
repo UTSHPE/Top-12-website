@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { committeeLabel, getDashboardStats } from '@/lib/events'
 import { currentSeason, formatDate, greeting } from '@/lib/format'
 import { getOfficer } from '@/lib/officer'
-import { LiveDot } from '@/components/StatusPill'
+import { InternalTag, LiveDot } from '@/components/StatusPill'
 import PresentCodeButton from '@/components/PresentCodeButton'
 import ImportantLinks from '@/components/ImportantLinks'
 import AdminTopbar, { NewEventButton } from './AdminTopbar'
@@ -93,6 +93,7 @@ export default async function OfficerDashboardPage() {
                       <p className="flex items-center gap-2">
                         {event.isOpen && <LiveDot />}
                         <span className="truncate text-sm font-bold">{event.title}</span>
+                        {event.isInternal && <InternalTag />}
                       </p>
                       <p className="mt-0.5 truncate text-xs text-muted">
                         {formatDate(event.start)} ·{' '}
@@ -134,7 +135,10 @@ export default async function OfficerDashboardPage() {
                       key={event.id}
                       className={`grid ${TABLE_COLS} items-center border-t border-black/6 px-5 py-3.5 text-sm`}
                     >
-                      <span className="truncate pr-3 font-bold">{event.title}</span>
+                      <span className="flex min-w-0 items-center gap-2 pr-3">
+                        <span className="truncate font-bold">{event.title}</span>
+                        {event.isInternal && <InternalTag />}
+                      </span>
                       <span className="truncate pr-3 text-muted">
                         {committeeLabel(event)}
                       </span>

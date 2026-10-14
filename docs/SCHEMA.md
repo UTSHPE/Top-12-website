@@ -53,6 +53,7 @@ Added by migrations in this repo (not yet applied unless you ran them):
 | `driver_access_code` | `011` | Optional second code for drivers. Partial unique index; shares the check-in window and `is_open`. Officer-only, never mirrored to Google. |
 | `driver_base_points` | `011` | Driver points = `driver_base_points × driver_multiplier`, earned on top of attendance. |
 | `driver_multiplier` | `011` | A CHECK keeps the three driver columns all-null or all-set. |
+| `is_internal` | `012` | Officer tracking only (e.g. LeaderSHPE): never sent to Google, hidden from member listings. A CHECK forces `base_points = 0` and no driver code. |
 
 Confirmed **absent** before migrations: `is_open`, `checkin_closes_at`,
 `deleted_at`, and any Google Calendar id column. The calendar integration is

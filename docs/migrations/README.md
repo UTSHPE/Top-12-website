@@ -20,6 +20,7 @@ re-running one is harmless.
 | 009 | `009_important_links.sql` | Creates `important_links` (RLS on, no policy) | **Yes** |
 | 010 | `010_important_links_t12.sql` | Allows `'T12'` (whole officer team) as a link committee | **Yes** |
 | 011 | `011_driver_sign_in.sql` | Driver access code + points on `events`; `sign_ins.role`; unique index becomes `(event_id, eid, role)` | **Yes** |
+| 012 | `012_events_is_internal.sql` | Adds `events.is_internal` (no Calendar, zero points, hidden from members) | **Yes** |
 
 ## ⚠️ 001, 003, and 004 must be applied before the app will work
 

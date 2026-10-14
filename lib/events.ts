@@ -32,6 +32,11 @@ export type ChapterEvent = {
    * separately from points — see docs/migrations/007. Never feeds `points`.
    */
   isRtc: boolean
+  /**
+   * Officer tracking only (migration 012): no Google Calendar entry, zero
+   * points, and kept off every member-facing listing.
+   */
+  isInternal: boolean
 }
 
 /**
@@ -175,10 +180,11 @@ type EventRow = {
   multiplier: number
   is_open: boolean
   is_rtc: boolean
+  is_internal: boolean
 }
 
 const EVENT_COLUMNS =
-  'id, title, location, event_type, secondary_event_type, created_by_officer, access_code, calendar_start, calendar_end, check_in_start, check_in_end, base_points, multiplier, is_open, is_rtc'
+  'id, title, location, event_type, secondary_event_type, created_by_officer, access_code, calendar_start, calendar_end, check_in_start, check_in_end, base_points, multiplier, is_open, is_rtc, is_internal'
 
 /**
  * The driver code is officer-only. It lives in its own column list so it can
@@ -248,10 +254,16 @@ function toChapterEvent(row: EventRow, now: number): ChapterEvent {
     // and `undefined` would render as an unchecked box that silently clears the
     // flag on the next save.
     isRtc: row.is_rtc === true,
+    // Coalesced like isRtc. Defaulting the other way would be the worse
+    // failure: an internal meeting showing up on the member grid.
+    isInternal: row.is_internal === true,
   }
 }
 
-/** Everything that hasn't finished yet, soonest first — the /events grid. */
+/**
+ * Everything that hasn't finished yet, soonest first — the /events grid and
+ * the home page. Members only, so internal events are left out.
+ */
 export async function getUpcomingEvents(limit = 24): Promise<ChapterEvent[]> {
   const supabase = createAdminClient()
   const now = new Date()
@@ -260,6 +272,7 @@ export async function getUpcomingEvents(limit = 24): Promise<ChapterEvent[]> {
     .from('events')
     .select(EVENT_COLUMNS)
     .is('deleted_at', null)
+    .eq('is_internal', false)
     .gte('calendar_end', now.toISOString())
     .order('calendar_start', { ascending: true })
     .limit(limit)
@@ -269,20 +282,29 @@ export async function getUpcomingEvents(limit = 24): Promise<ChapterEvent[]> {
 
 /**
  * The event members can check into right now, if any. Drives the event name on
- * the check-in screen and the "Live right now" tile on the officer dashboard.
+ * the check-in screen and the live card on the member home page.
+ *
+ * Internal events are left out unless asked for. The home page must not
+ * advertise a LeaderSHPE meeting, but the check-in screen should still name
+ * the meeting the people in that room are checking into.
  */
-export async function getOpenEvent(): Promise<ChapterEvent | null> {
+export async function getOpenEvent({
+  includeInternal = false,
+}: { includeInternal?: boolean } = {}): Promise<ChapterEvent | null> {
   const supabase = createAdminClient()
   const now = new Date()
   const iso = now.toISOString()
 
-  const { data } = await supabase
+  let query = supabase
     .from('events')
     .select(EVENT_COLUMNS)
     .is('deleted_at', null)
     .eq('is_open', true)
     .lte('check_in_start', iso)
     .gte('check_in_end', iso)
+  if (!includeInternal) query = query.eq('is_internal', false)
+
+  const { data } = await query
     .order('check_in_start', { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -407,6 +429,8 @@ export type EditableEvent = {
   checkInEnabled: boolean
   /** Counts toward RTC. Editable here AND from the events table — see below. */
   isRtc: boolean
+  /** Fixed at creation, like the committee. Internal events can't add a driver code. */
+  isInternal: boolean
   accessCode: string
   /** Null until driver sign-in is turned on; fixed once it is. */
   driver: DriverSignIn | null
@@ -431,7 +455,7 @@ export async function getEventForEdit(eventId: string): Promise<EditableEvent | 
     supabase
       .from('events')
       .select(
-        'id, title, location, event_type, secondary_event_type, access_code, calendar_start, calendar_end, check_in_start, check_in_end, is_open, is_rtc, driver_access_code, driver_base_points, driver_multiplier'
+        'id, title, location, event_type, secondary_event_type, access_code, calendar_start, calendar_end, check_in_start, check_in_end, is_open, is_rtc, is_internal, driver_access_code, driver_base_points, driver_multiplier'
       )
       .eq('id', eventId)
       .is('deleted_at', null)
@@ -451,6 +475,7 @@ export async function getEventForEdit(eventId: string): Promise<EditableEvent | 
     checkInEnd: row.check_in_end,
     checkInEnabled: row.is_open !== false,
     isRtc: row.is_rtc === true,
+    isInternal: row.is_internal === true,
     accessCode: row.access_code,
     driver: toDriverSignIn(row),
     committee: committeeLabel({

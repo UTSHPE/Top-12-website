@@ -8,7 +8,7 @@ import {
 } from '@/lib/events'
 import { formatDateLong, formatPoints } from '@/lib/format'
 import AdminTopbar, { NewEventButton } from '@/app/admin/AdminTopbar'
-import { LiveDot } from '@/components/StatusPill'
+import { InternalTag, LiveDot } from '@/components/StatusPill'
 import DeleteEventButton from './DeleteEventButton'
 import CheckInToggle from './CheckInToggle'
 import RtcToggle from './RtcToggle'
@@ -82,6 +82,7 @@ export default async function OfficerAnalyticsPage() {
                       <span className="flex min-w-0 items-center gap-2 pr-3">
                         {event.isOpen && <LiveDot />}
                         <span className="truncate font-bold">{event.title}</span>
+                        {event.isInternal && <InternalTag />}
                       </span>
                       <span className="truncate pr-3 text-muted">
                         {committeeLabel(event)}
@@ -170,6 +171,7 @@ function EventCard({ event }: { event: EventWithAttendance }) {
           <p className="flex items-center gap-2">
             {event.isOpen && <LiveDot />}
             <span className="truncate font-bold">{event.title}</span>
+            {event.isInternal && <InternalTag />}
           </p>
           <p className="mt-0.5 truncate text-xs text-muted">
             {committeeLabel(event)} · {formatDateLong(event.start)}

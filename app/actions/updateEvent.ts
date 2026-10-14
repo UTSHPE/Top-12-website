@@ -69,7 +69,9 @@ export async function updateEvent(input: {
 
   const { data: event, error: lookupError } = await supabase
     .from('events')
-    .select('id, title, calendar_start, google_event_id, access_code, driver_access_code')
+    .select(
+      'id, title, calendar_start, google_event_id, access_code, driver_access_code, is_internal'
+    )
     .eq('id', input.eventId)
     .is('deleted_at', null)
     .maybeSingle()
@@ -125,6 +127,11 @@ export async function updateEvent(input: {
   const location = input.location.trim() || null
 
   const addDriver = input.addDriver ?? null
+  // Internal events (migration 012) are worth nothing, drivers included. The
+  // CHECK in 012 would reject the write anyway; this says why.
+  if (addDriver && event.is_internal) {
+    throw new Error('Internal events are worth no points, so they cannot have a driver code.')
+  }
   if (
     addDriver &&
     !(

@@ -39,7 +39,13 @@ export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
   const totals = new Map<string, number>()
   const lastEarnedAt = new Map<string, number>()
   for (const row of signIns ?? []) {
-    totals.set(row.eid, (totals.get(row.eid) ?? 0) + Number(row.points_earned))
+    const points = Number(row.points_earned)
+    totals.set(row.eid, (totals.get(row.eid) ?? 0) + points)
+    // A zero-point check-in (an internal event, migration 012) didn't add to
+    // the total, so it must not count as "last earned" either — otherwise
+    // attending a LeaderSHPE meeting would drop a member behind everyone
+    // they're tied with.
+    if (points <= 0) continue
     // created_at is the check-in timestamp; a bad value sorts as "just now".
     const at = Date.parse(row.created_at as string)
     const stamp = Number.isNaN(at) ? Date.now() : at

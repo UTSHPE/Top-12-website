@@ -10,7 +10,9 @@ import { LiveDot } from '@/components/StatusPill'
  * page a valid code to display.
  */
 export default async function CheckInHeader() {
-  const open = await getOpenEvent()
+  // Internal events included: whoever is in a LeaderSHPE meeting should still
+  // see that they're checking into the right thing.
+  const open = await getOpenEvent({ includeInternal: true })
 
   return (
     <header className="mb-6">

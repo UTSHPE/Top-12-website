@@ -4,6 +4,21 @@ export function LiveDot({ className = 'size-1.5 bg-success' }: { className?: str
 }
 
 /**
+ * Marks an internal event (migration 012) in officer listings: tracked here,
+ * but off Google Calendar, off member pages, and worth nothing.
+ */
+export function InternalTag() {
+  return (
+    <span
+      title="Internal — not on Google Calendar, hidden from members, 0 points"
+      className="flex-none rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-bold tracking-[.05em] text-faint uppercase"
+    >
+      Internal
+    </span>
+  )
+}
+
+/**
  * Check-in status on an event ticket. Only shown while check-in is open — the
  * events page lists upcoming events, so labelling the rest "Upcoming" said nothing.
  */

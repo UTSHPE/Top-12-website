@@ -191,9 +191,15 @@ function AttendedRow({ event }: { event: AttendedEvent }) {
         )}
       </div>
 
-      <div className="flex-none text-[13px] font-extrabold text-success">
-        +{formatPoints(event.points)}
-      </div>
+      {/* Zero-point rows are internal events (migration 012) — attendance with
+          nothing earned, so no green "+0". */}
+      {event.points === 0 ? (
+        <div className="flex-none text-[13px] font-bold text-faint">0 pts</div>
+      ) : (
+        <div className="flex-none text-[13px] font-extrabold text-success">
+          +{formatPoints(event.points)}
+        </div>
+      )}
     </li>
   )
 }

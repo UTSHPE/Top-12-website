@@ -32,6 +32,7 @@ export default function CreateEventForm({ officerName }: { officerName: string }
   const [eventType, setEventType] = useState('')
   const [secondaryEventType, setSecondaryEventType] = useState('')
   const [isRtc, setIsRtc] = useState(false)
+  const [isInternal, setIsInternal] = useState(false)
   const [createdByOfficer, setCreatedByOfficer] = useState(officerName)
   const [calendarStart, setCalendarStart] = useState('')
   const [calendarEnd, setCalendarEnd] = useState('')
@@ -72,9 +73,13 @@ export default function CreateEventForm({ officerName }: { officerName: string }
         isRecurring,
         weekCount: isRecurring ? weekCount : 1,
         isRtc,
-        driver: hasDriver
-          ? { basePoints: driverBasePoints, multiplier: driverMultiplier }
-          : undefined,
+        isInternal,
+        // Internal events are worth nothing, drivers included. The box stays
+        // ticked underneath if it was, so un-ticking Internal brings it back.
+        driver:
+          hasDriver && !isInternal
+            ? { basePoints: driverBasePoints, multiplier: driverMultiplier }
+            : undefined,
       })
       setCalendarWarnings(calendarWarnings)
       setDriverCodes(driverCodes)
@@ -93,6 +98,7 @@ export default function CreateEventForm({ officerName }: { officerName: string }
         driverCode={driverCodes[0] ?? null}
         eventTitle={title}
         calendarWarnings={calendarWarnings}
+        isInternal={isInternal}
       />
     )
 
@@ -207,6 +213,16 @@ export default function CreateEventForm({ officerName }: { officerName: string }
               onChange={setIsRtc}
             />
 
+            {/* For officer-side meetings like LeaderSHPE: the code still works,
+                so attendance is tracked here instead of on a separate list. */}
+            <CheckboxField
+              id="isInternal"
+              label="Internal — officer tracking only"
+              hint="Not added to Google Calendar, hidden from members, worth 0 points."
+              checked={isInternal}
+              onChange={setIsInternal}
+            />
+
             <div>
               <label className={LABEL} htmlFor="host">
                 Hosting officer
@@ -253,38 +269,44 @@ export default function CreateEventForm({ officerName }: { officerName: string }
             </div>
           </Panel>
 
-          <Panel eyebrow="Points & recurrence" color="var(--color-success)" Icon={FaStar}>
-            <div className="grid gap-3.5 sm:grid-cols-2">
-              <div>
-                <label className={LABEL} htmlFor="basePoints">
-                  Base points
-                </label>
-                <input
-                  id="basePoints"
-                  type="number"
-                  min={1}
-                  value={basePoints}
-                  onChange={(e) => setBasePoints(Number(e.target.value))}
-                  required
-                  className={INPUT}
-                />
+          <Panel
+            eyebrow={isInternal ? 'Recurrence' : 'Points & recurrence'}
+            color="var(--color-success)"
+            Icon={FaStar}
+          >
+            {!isInternal && (
+              <div className="grid gap-3.5 sm:grid-cols-2">
+                <div>
+                  <label className={LABEL} htmlFor="basePoints">
+                    Base points
+                  </label>
+                  <input
+                    id="basePoints"
+                    type="number"
+                    min={1}
+                    value={basePoints}
+                    onChange={(e) => setBasePoints(Number(e.target.value))}
+                    required
+                    className={INPUT}
+                  />
+                </div>
+                <div>
+                  <label className={LABEL} htmlFor="multiplier">
+                    Multiplier
+                  </label>
+                  <input
+                    id="multiplier"
+                    type="number"
+                    min={0.1}
+                    step={0.1}
+                    value={multiplier}
+                    onChange={(e) => setMultiplier(Number(e.target.value))}
+                    required
+                    className={INPUT}
+                  />
+                </div>
               </div>
-              <div>
-                <label className={LABEL} htmlFor="multiplier">
-                  Multiplier
-                </label>
-                <input
-                  id="multiplier"
-                  type="number"
-                  min={0.1}
-                  step={0.1}
-                  value={multiplier}
-                  onChange={(e) => setMultiplier(Number(e.target.value))}
-                  required
-                  className={INPUT}
-                />
-              </div>
-            </div>
+            )}
 
             {/* Checkbox and week count are bound into one bordered group so the
                 dropdown reads as a condition of the checkbox, not a new field. */}
@@ -332,27 +354,29 @@ export default function CreateEventForm({ officerName }: { officerName: string }
             </div>
           </Panel>
 
-          <Panel eyebrow="Driver sign-in" color="var(--color-secondary)" Icon={FaCar}>
-            <CheckboxField
-              id="hasDriver"
-              label="Separate code for drivers"
-              hint={
-                isRecurring
-                  ? `Each of the ${weekCount} events gets its own driver code. Driver points stack with attendance.`
-                  : 'Drivers enter a second code and earn these points on top of attendance.'
-              }
-              checked={hasDriver}
-              onChange={setHasDriver}
-            />
-            {hasDriver && (
-              <DriverPointsFields
-                basePoints={driverBasePoints}
-                multiplier={driverMultiplier}
-                onBasePoints={setDriverBasePoints}
-                onMultiplier={setDriverMultiplier}
+          {!isInternal && (
+            <Panel eyebrow="Driver sign-in" color="var(--color-secondary)" Icon={FaCar}>
+              <CheckboxField
+                id="hasDriver"
+                label="Separate code for drivers"
+                hint={
+                  isRecurring
+                    ? `Each of the ${weekCount} events gets its own driver code. Driver points stack with attendance.`
+                    : 'Drivers enter a second code and earn these points on top of attendance.'
+                }
+                checked={hasDriver}
+                onChange={setHasDriver}
               />
-            )}
-          </Panel>
+              {hasDriver && (
+                <DriverPointsFields
+                  basePoints={driverBasePoints}
+                  multiplier={driverMultiplier}
+                  onBasePoints={setDriverBasePoints}
+                  onMultiplier={setDriverMultiplier}
+                />
+              )}
+            </Panel>
+          )}
 
           {errorMsg && <ErrorStrip title="Couldn't create that." detail={errorMsg} />}
 
@@ -390,11 +414,13 @@ function CodeGenerated({
   driverCode,
   eventTitle,
   calendarWarnings,
+  isInternal,
 }: {
   codes: string[]
   driverCode: string | null
   eventTitle: string
   calendarWarnings: string[]
+  isInternal: boolean
 }) {
   const [copied, setCopied] = useState(false)
   const code = codes[0]
@@ -421,7 +447,9 @@ function CodeGenerated({
             Event created
           </h1>
           <p className="mb-[26px] text-[15px] text-[#C7BCAE]">
-            Put this code on your slide — members type it to check in.
+            {isInternal
+              ? 'Internal event: not on Google Calendar, 0 points. Share this code with the people attending.'
+              : 'Put this code on your slide — members type it to check in.'}
           </p>
 
           <div className="mb-[22px]">

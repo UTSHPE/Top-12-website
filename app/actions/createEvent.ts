@@ -33,6 +33,12 @@ export async function createEvent(input: {
    * on top of attendance. Shares the check-in window and `is_open`.
    */
   driver?: { basePoints: number; multiplier: number }
+  /**
+   * Officer tracking only (LeaderSHPE and the like): never sent to Google
+   * Calendar, worth zero points, no driver code, hidden from member listings.
+   * The points and driver inputs are overridden below, not trusted.
+   */
+  isInternal?: boolean
 }): Promise<{
   codes: string[]
   /** Parallel to `codes` — the driver code for each occurrence, or null. */
@@ -74,6 +80,11 @@ export async function createEvent(input: {
 
   // Same reasoning as the committees: the form gates these, the action cannot
   // trust that it did. A NaN here would be stored and award NaN points.
+  const isInternal = input.isInternal === true
+  if (isInternal && input.driver) {
+    throw new Error('Internal events are worth no points, so they cannot have a driver code.')
+  }
+
   const driver = input.driver ?? null
   if (
     driver &&
@@ -101,8 +112,10 @@ export async function createEvent(input: {
       calendar_end: new Date(input.calendarEnd.getTime() + i * WEEK_MS).toISOString(),
       check_in_start: new Date(input.checkInStart.getTime() + i * WEEK_MS).toISOString(),
       check_in_end: new Date(input.checkInEnd.getTime() + i * WEEK_MS).toISOString(),
-      base_points: input.basePoints,
-      multiplier: input.multiplier,
+      // Zero, not whatever the form sent — migration 012's CHECK rejects
+      // anything else on an internal row.
+      base_points: isInternal ? 0 : input.basePoints,
+      multiplier: isInternal ? 1 : input.multiplier,
       access_code,
       // Its own code per occurrence, like access_code. Regenerated on the off
       // chance it equals this row's attendee code — check-in tells the two apart
@@ -112,6 +125,7 @@ export async function createEvent(input: {
       driver_multiplier: driver?.multiplier ?? null,
       recurrence_group_id,
       is_rtc: input.isRtc,
+      is_internal: isInternal,
     }
   })
 
@@ -122,6 +136,16 @@ export async function createEvent(input: {
     .insert(rows)
     .select('id, access_code')
   if (error) throw new Error(error.message)
+
+  const result = {
+    codes: rows.map((row) => row.access_code),
+    driverCodes: rows.map((row) => row.driver_access_code),
+  }
+
+  // Internal events never reach the chapter calendar — keeping them off it is
+  // half the point. google_event_id stays null, which is also what keeps
+  // updateEvent and deleteEvent from ever touching Google for them.
+  if (isInternal) return { ...result, calendarWarnings: [] }
 
   // Mirror onto the chapter Google Calendar. The rows are already committed, so
   // a Calendar failure is reported back as a partial success rather than thrown —
@@ -237,11 +261,7 @@ export async function createEvent(input: {
   // Hand the codes back so the officer can put the first one on a slide right
   // away — that hand-off is the whole point of the create flow. The warnings
   // ride along so a partial success is never presented as a clean one.
-  return {
-    codes: rows.map((row) => row.access_code),
-    driverCodes: rows.map((row) => row.driver_access_code),
-    calendarWarnings: uniqueWarnings,
-  }
+  return { ...result, calendarWarnings: uniqueWarnings }
 }
 
 function distinctCode(other: string): string {
