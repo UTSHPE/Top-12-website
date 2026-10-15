@@ -485,7 +485,7 @@ export type EventSignIns = {
     date: string
     committee: string
   }
-  /** One entry per member who checked in, alphabetical. Names only. */
+  /** One entry per sign-in, alphabetical. Driver sign-ins end in " - Driver". */
   names: string[]
   /** Names that appear in `names` more than once, listed once each. */
   duplicates: string[]
@@ -517,36 +517,37 @@ export async function getEventSignIns(eventId: string): Promise<EventSignIns | n
       .eq('id', eventId)
       .is('deleted_at', null)
       .maybeSingle(),
-    // Attendees only. The wheel is for people in the room; a driver who
-    // dropped people off and left has a driver row and nothing else.
+    // Attendees and drivers both. A driver's entry is suffixed so the officer
+    // can tell it apart, and strike it before spinning if the wheel should be
+    // people in the room only.
     supabase
       .from('sign_ins')
-      .select('eid')
+      .select('eid, role')
       .eq('event_id', eventId)
-      .eq('role', 'attendee')
       .is('deleted_at', null),
   ])
 
   if (!row) return null
 
-  // One entry per person, not per row. The unique index on (event_id, eid,
-  // role) plus the attendee filter above already makes a second row
-  // impossible, so this is belt-and-braces — but a duplicated EID would hand
-  // one member two slices of the wheel, which is the one way this page could
-  // quietly rig a raffle.
+  // One entry per person per role. The unique index on (event_id, eid, role)
+  // already makes a second row impossible, so this is belt-and-braces — but a
+  // duplicated EID would hand one member two slices of the wheel, which is the
+  // one way this page could quietly rig a raffle.
   //
   // Deduped on the lowercased EID, since EID case never matters anywhere in
   // this app, while the roster's own spelling is what gets kept — `.in()` below
   // matches case-sensitively, so lowercasing the values themselves would miss
   // every roster row typed in caps through the Supabase dashboard.
-  const seenEids = new Set<string>()
-  const eids: string[] = []
+  const seenKeys = new Set<string>()
+  const entries: { eid: string; driver: boolean }[] = []
   for (const signIn of signInRows ?? []) {
-    const key = signIn.eid.toLowerCase()
-    if (seenEids.has(key)) continue
-    seenEids.add(key)
-    eids.push(signIn.eid)
+    const driver = signIn.role === 'driver'
+    const key = `${signIn.eid.toLowerCase()}:${driver ? 'driver' : 'attendee'}`
+    if (seenKeys.has(key)) continue
+    seenKeys.add(key)
+    entries.push({ eid: signIn.eid, driver })
   }
+  const eids = [...new Set(entries.map((e) => e.eid))]
 
   // Skip the second round trip when nobody has checked in yet. An empty `.in()`
   // list is an easy way to accidentally select the whole roster.
@@ -567,8 +568,11 @@ export async function getEventSignIns(eventId: string): Promise<EventSignIns | n
   // Nameless rows are dropped rather than filled in with the EID: a blank slice
   // on the wheel is worse than one fewer entry, and an EID on the projector is
   // a name nobody in the room can read out.
-  const names = eids
-    .map((eid) => nameByEid.get(eid.toLowerCase()) ?? '')
+  const names = entries
+    .map(({ eid, driver }) => {
+      const name = nameByEid.get(eid.toLowerCase()) ?? ''
+      return name !== '' && driver ? `${name} - Driver` : name
+    })
     .filter((name) => name !== '')
     // Alphabetical so the order is stable across the refreshes this page is
     // built around — a list that reshuffles every time someone new checks in is
